@@ -14,6 +14,7 @@ import { createGameState, GAME_PHASES } from './state/gameState.js';
 // entities/ sits next to src/
 import { EAGLE } from '../entities/moon/eagle.js';
 import { LRV } from '../entities/moon/lrv.js';
+import { SURVEYOR3 } from '../entities/moon/surveyor3.js';
 import { INGENUITY } from '../entities/mars/ingenuity.js';
 import { INSIGHT } from '../entities/mars/insight.js';
 import { SOJOURNER } from '../entities/mars/sojourner.js';
@@ -26,12 +27,13 @@ const query = new URLSearchParams(window.location.search);
 // DEV SHORTCUTS
 //   /?view=eagle      -> jump straight to the Eagle equipment page
 //   /?view=lrv        -> jump straight to the Moon Buggy equipment page
+//   /?view=surveyor3  -> jump straight to the Surveyor 3 equipment page
 //   /?view=ingenuity  -> jump straight to the Ingenuity equipment page
 //   /?view=insight    -> jump straight to the InSight equipment page
 //   /?view=sojourner  -> jump straight to the Sojourner equipment page
 //   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment)
 const view = query.get('view');
-const VIEW_ENTITIES = { eagle: EAGLE, lrv: LRV, ingenuity: INGENUITY, insight: INSIGHT, sojourner: SOJOURNER };
+const VIEW_ENTITIES = { eagle: EAGLE, lrv: LRV, surveyor3: SURVEYOR3, ingenuity: INGENUITY, insight: INSIGHT, sojourner: SOJOURNER };
 const requestedEntity = VIEW_ENTITIES[view] || EAGLE;
 const requestedPhase = VIEW_ENTITIES[view]
   ? 'equipment'
@@ -50,13 +52,13 @@ const ENTITIES = {
   insight: INSIGHT,
   sojourner: SOJOURNER,
   pathfinder: SOJOURNER,
-  // surveyor3: SURVEYOR3,
+  surveyor3: SURVEYOR3,
   // 'mars-equipment-2': MARS_TWO,
 };
 
 // What the < / > pager walks through on each planet. Add new equipment here as you write it.
 const PLANET_EQUIPMENT = {
-  moon: [EAGLE, LRV],
+  moon: [EAGLE, LRV, SURVEYOR3],
   mars: [INGENUITY, INSIGHT, SOJOURNER],
 };
 
