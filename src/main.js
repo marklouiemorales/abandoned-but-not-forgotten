@@ -6,15 +6,19 @@ import { createEquipmentViewer } from './scenes/equipmentViewerScene.js';
 import { setupPlanetRaycaster } from './interaction/raycaster.js';
 import { createGameState, GAME_PHASES } from './state/gameState.js';
 import { EAGLE } from '../entities/moon/eagle.js';
+import { LRV } from '../entities/moon/lrv.js';
 
 const planetContainer = document.getElementById('moon-container');
 const query = new URLSearchParams(window.location.search);
 
 // DEV SHORTCUTS
 //   /?view=eagle  -> jump straight to the Eagle equipment page
+//   /?view=lrv    -> jump straight to the Moon Buggy equipment page
 //   /?phase=moon  -> jump to a phase (registration, briefing, moon, mars, equipment)
+const view = query.get('view');
+const requestedEntity = view === 'lrv' ? LRV : EAGLE;
 const requestedPhase =
-  query.get('view') === 'eagle' ? 'equipment' : query.get('phase') || query.get('planet');
+  view === 'eagle' || view === 'lrv' ? 'equipment' : query.get('phase') || query.get('planet');
 
 // The story starts on the Moon, so Moon is the default
 const preferredPlanet = query.get('planet') === 'mars' ? 'mars' : 'moon';
@@ -64,8 +68,8 @@ const phases = {
     enter({ state, goTo }) {
       return createDialogueScene(document.body, {
         explorer: state.explorer,
-        // Spaceship/launch phases don't exist yet, so go to the Eagle page for now
-          onAccept: (explorer) => goTo('moon', { explorer }),
+        // Spaceship/launch phases don't exist yet, so go to the Moon for now
+        onAccept: (explorer) => goTo('moon', { explorer }),
       });
     },
     exit({ scene }) {
@@ -76,20 +80,19 @@ const phases = {
     enter({ state, goTo }) {
       const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
       return createEquipmentViewer(document.body, {
-        entity: EAGLE,
+        entities: [EAGLE, LRV],           // the < / > pager walks through these
+        entity: requestedEntity,          // which one opens first
         explorer,
         config: { pager: { index: 1, total: 3 }, archive: { saved: 1, total: 6 } },
         onBack: () => goTo('moon'),
-        onArchive: () => console.log('Open archive', explorer),
-        onPrev: () => console.log('Previous equipment'),
-        onNext: () => console.log('Next equipment'),
+        // no onArchive / onPrev / onNext: the viewer handles them itself
       });
     },
     exit({ scene }) {
       scene.dispose();
     },
   },
-   moon: createPlanetPhase(createMoonScene, 'Moon', '/assets/models/moon/moon.glb', (goTo) =>
+  moon: createPlanetPhase(createMoonScene, 'Moon', '/assets/models/moon/moon.glb', (goTo) =>
     goTo('equipment')
   ),
   mars: createPlanetPhase(createMarsScene, 'Mars', '/assets/models/mars/mars.glb'),

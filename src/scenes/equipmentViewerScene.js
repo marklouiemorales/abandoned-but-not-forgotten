@@ -23,6 +23,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { createSpaceBackground } from './spaceBackground.js';
+import { loadArchive, saveEquipment } from './archiveStore.js';
 
 export const VIEWER_CONFIG = {
   background: true,
@@ -48,6 +49,8 @@ export const VIEWER_CONFIG = {
     data: 'Data', ready: 'Ready', loading: 'Loading', awaiting: 'Awaiting GLB',
     discovered: 'Equipment discovered', saved: '{saved} of {total} saved to your archive',
     next: 'Continue', done: 'Finish', close: 'Close', skip: 'Skip',
+    archiveTitle: 'Archive', yourCard: 'Explorer card', equipmentCards: 'Equipment cards',
+    commander: 'Space Commander', cardId: 'ID', cardRank: 'Rank', cardSaved: 'Cards saved', locked: 'Locked',
     placeholder: '3D model',
     statLabels: { coordinates: 'Coordinates', size: 'Size', mass: 'Mass', power: 'Power source', materials: 'Materials' },
   },
@@ -285,6 +288,81 @@ const STYLES = `
     border: 1px solid var(--line); border-radius: 999px; cursor: pointer; transition: background .2s, border-color .2s; }
   .eq-go:hover { background: rgba(90,169,255,.22); border-color: var(--accent); }
 
+  /* ---------- ARCHIVE: boarding-pass cards (explorer card + saved equipment cards) ---------- */
+  .eq-arch { position: absolute; inset: 0; z-index: 11; display: grid; place-items: center; padding: 20px; background: rgba(2,5,16,.82);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .3s, visibility 0s .3s; }
+  .eq-arch.open { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+  .eq-arch > .eq-paper { width: min(790px, 96vw); max-height: 92vh; display: flex; flex-direction: column; background: rgba(4,9,26,.95); border-color: var(--line); }
+  .eq-arch-body { display: grid; gap: 24px; padding: 20px; overflow: auto; }
+  /* explorer card = 472px wide, each equipment card = 236px (exactly half) */
+  .eq-arch-body .eq-sub { text-align: center; }
+  .eq-ucard { margin-top: 12px; display: flex; justify-content: center; }
+  .eq-ucard .eq-tk { width: min(472px, 100%); }
+  .eq-egrid { margin-top: 12px; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+  .eq-egrid .eq-tk { flex: none; width: 236px; }
+
+  .eq-tk { container-type: inline-size; display: block; width: 100%; text-shadow: none; transition: transform .2s, filter .2s; }
+  .eq-tk[data-id] { cursor: pointer; }
+  .eq-tk[data-id]:hover { transform: translateY(-2px); filter: drop-shadow(0 0 10px rgba(90,169,255,.55)); }
+  .eq-tk.cur { filter: drop-shadow(0 0 10px rgba(90,169,255,.9)); }
+  .eq-tkc { display: grid; grid-template-columns: 31% 1fr 19%; aspect-ratio: 720 / 330; overflow: hidden; color: #0d1b3d; border-radius: 2.2cqw;
+    background: linear-gradient(135deg, #f4f7fc, #dbe6f4);
+    clip-path: polygon(0 0, calc(100% - 5cqw) 0, 100% 5cqw, 100% 100%, 0 100%); }
+  /* left stub: barcode, vertical label, dark photo panel */
+  .eq-tks { display: flex; gap: 1.4cqw; padding: 2.2cqw 2.2cqw 2.2cqw 2cqw; background: #cddcf0; border-right: 1.5px dashed #7f93b5; }
+  .eq-bar { flex: none; width: 6.4cqw; background: repeating-linear-gradient(90deg, #0d1b3d 0 .5cqw, transparent .5cqw .9cqw, #0d1b3d .9cqw 1.2cqw, transparent 1.2cqw 1.9cqw, #0d1b3d 1.9cqw 2.7cqw, transparent 2.7cqw 3.1cqw); }
+  .eq-vt { flex: none; writing-mode: vertical-rl; transform: rotate(180deg); font-size: max(6px, 1.2cqw); letter-spacing: .16em; text-transform: uppercase; color: #3f5580; white-space: nowrap; }
+  .eq-pnl { position: relative; flex: 1; min-width: 0; border-radius: 1.6cqw; overflow: hidden; border: 1px solid #5a2f27;
+    background: radial-gradient(ellipse at 50% 108%, rgba(224,98,63,.95), rgba(224,98,63,0) 62%), linear-gradient(#04061a, #080c26); }
+  .eq-pnl.moon { border-color: #34466f; background: radial-gradient(ellipse at 50% 108%, rgba(150,185,255,.85), rgba(150,185,255,0) 62%), linear-gradient(#04061a, #080c26); }
+  .eq-pnl.mars { border-color: #5a2f27; }
+  .eq-pnl b { position: absolute; left: 0; right: 0; bottom: 1.2cqw; text-align: center; font-size: max(6px, 1.4cqw); letter-spacing: .04em; color: #fff; }
+  /* main text */
+  .eq-tkc.nostub { grid-template-columns: 1fr 23%; }
+  .eq-tkc.nostub .eq-tkm { padding-left: 3.6cqw; }
+  .eq-tkm { min-width: 0; padding: 2.6cqw 1.6cqw 2.4cqw 3cqw; display: flex; flex-direction: column;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='97'><path d='M28 2 54 17v30L28 62 2 47V17z' fill='none' stroke='%237f93b5' stroke-opacity='.25'/></svg>"); }
+  .eq-tkh { display: flex; align-items: center; gap: 1.2cqw; padding-bottom: 1cqw; border-bottom: 1px solid #b9c7dc; font-size: max(8px, 1.9cqw); letter-spacing: .02em; }
+  .eq-pdot { flex: none; width: 2.6cqw; height: 2.6cqw; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #6fa0ff, #1c3f9a); }
+  .eq-pdot.moon { background: radial-gradient(circle at 35% 30%, #f1f1f3, #8d9099); }
+  .eq-pdot.mars { background: radial-gradient(circle at 35% 30%, #ff9a73, #b04a2c); }
+  .eq-tkk { margin-top: .9cqw; font-size: max(6px, 1.25cqw); letter-spacing: .14em; text-transform: uppercase; color: #6d83a8; }
+  .eq-tkn { margin-top: 1.2cqw; font-size: 4.8cqw; font-weight: 700; line-height: 1.05; letter-spacing: .02em; text-transform: uppercase; overflow-wrap: anywhere; }
+  .eq-tkn2 { margin-top: .4cqw; font-size: 3.4cqw; line-height: 1.15; text-transform: uppercase; overflow-wrap: anywhere; }
+  .eq-tkn2.sm { font-size: max(7px, 1.7cqw); letter-spacing: .04em; color: #2a3d63; }
+  .eq-tkf { margin-top: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4cqw 2cqw; }
+  .eq-tkf > div { min-width: 0; padding-top: .8cqw; border-top: 1px solid #b9c7dc; }
+  .eq-tkf label { display: block; font-size: max(5.5px, 1.1cqw); letter-spacing: .14em; text-transform: uppercase; color: #6d83a8; }
+  .eq-tkf b { display: block; margin-top: .3cqw; font-size: max(7px, 1.9cqw); font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+  .eq-tkf small { display: block; font-size: max(5.5px, 1.05cqw); color: #6d83a8; }
+  /* right: round planet badge */
+  .eq-tkb { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .8cqw; padding: 1cqw 2cqw 1cqw 0; }
+  .eq-badge { width: 13cqw; height: 13cqw; border-radius: 50%; overflow: hidden; border: .6cqw solid #34466f; box-shadow: 0 .6cqw 1.6cqw rgba(13,27,61,.35); }
+  .eq-badge svg { width: 100%; height: 100%; display: block; }
+  .eq-bl2 { margin-top: 1cqw; padding-top: .8cqw; width: 100%; text-align: center; border-top: 1px solid #b9c7dc; font-size: max(5.5px, 1.05cqw); letter-spacing: .14em; text-transform: uppercase; color: #6d83a8; }
+  .eq-bv { font-size: max(7px, 1.7cqw); font-weight: 700; text-align: center; }
+  /* compact equipment card (half the width of the explorer card, laid out as a small stacked card) */
+  .eq-tk.sm .eq-tkc { display: block; position: relative; aspect-ratio: auto; min-height: 222px; border-radius: 10px;
+    clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%); }
+  .eq-tk.sm .eq-tkm { padding: 14px 14px 10px; }
+  .eq-tk.sm .eq-tkh { gap: 6px; padding-bottom: 6px; font-size: 8px; }
+  .eq-tk.sm .eq-pdot { width: 8px; height: 8px; }
+  .eq-tk.sm .eq-tkk { margin-top: 6px; font-size: 6px; }
+  .eq-tk.sm .eq-tkn { margin: 8px 48px 0 0; font-size: 19px; }
+  .eq-tk.sm .eq-tkn2.sm { margin: 4px 48px 0 0; font-size: 7.5px; line-height: 1.35; }
+  .eq-tk.sm .eq-tkf { margin-top: 10px; grid-template-columns: 1fr; gap: 0; }
+  .eq-tk.sm .eq-tkf > div { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; }
+  .eq-tk.sm .eq-tkf label { flex: none; width: 58px; font-size: 6px; }
+  .eq-tk.sm .eq-tkf b { margin: 0; font-size: 8px; text-align: right; }
+  .eq-tk.sm .eq-tkb { position: absolute; top: 34px; right: 12px; padding: 0; }
+  .eq-tk.sm .eq-badge { width: 38px; height: 38px; border-width: 2px; box-shadow: none; }
+  .eq-tk.sm .eq-bl2, .eq-tk.sm .eq-bv { display: none; }
+  .eq-tk.sm.lock .eq-tkc { display: grid; height: 222px; font-size: 10px; }
+  /* locked slot */
+  .eq-tk.lock .eq-tkc { display: grid; place-items: center; background: rgba(255,255,255,.04); border: 1px dashed var(--hair); color: var(--ink3);
+    font-size: max(10px, 2.2cqw); letter-spacing: .3em; text-transform: uppercase; }
+
   @media (max-width: 980px) {
     .eq-name { width: 170px; }
     .eq-disc { width: 220px; }
@@ -358,9 +436,14 @@ export function createEquipmentViewer(container = document.body, options = {}) {
   config.view.zoom = Math.min(config.zoom.max, Math.max(config.zoom.min, config.view.zoom));
   config.frame = { ...VIEWER_CONFIG.frame, ...(options.config?.frame || {}) };
   const t = config.text;
-  const V = config.view;
+  let V = config.view;   // replaced per entity (entity.glb.view) in setEntity
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  let entity = options.entity;
+  // one entity, or a list: the < / > pager walks through the list (wraps around)
+  const entities = options.entities?.length ? options.entities : [options.entity];
+  // the pager always shows config.pager.total (3 per planet); slots without an entity yet are just skipped
+  const pagerTotal = Math.max(config.pager.total, entities.length);
+  let idx = Math.max(0, entities.indexOf(options.entity));
+  let entity = entities[idx];
   const explorer = options.explorer || {};
   const fill = (str = '') => str.replace(/\{(\w+)\}/g, (_, k) => explorer[k] ?? (k === 'name' ? 'Explorer' : ''));
 
@@ -448,6 +531,15 @@ export function createEquipmentViewer(container = document.body, options = {}) {
 
     <div class="eq-foot">${config.footer}</div>
 
+    <div class="eq-arch" data-eq="arch"><div class="eq-paper">
+      <div class="eq-head"><span><i class="eq-logo"></i>${t.archiveTitle}</span><span class="grow" data-eq="archCount"></span>
+        <button class="eq-link" type="button" data-eq="archClose" style="margin-left:14px">${t.close}</button></div>
+      <div class="eq-arch-body">
+        <div><div class="eq-sub">${t.yourCard}</div><div class="eq-ucard" data-eq="ucard"></div></div>
+        <div><div class="eq-sub">${t.equipmentCards}</div><div class="eq-egrid" data-eq="egrid"></div></div>
+      </div>
+    </div></div>
+
     <div class="eq-story" data-eq="storywrap">
       <button class="eq-snd" type="button" data-eq="snd" aria-label="Sound" aria-pressed="false">${svg('sound')}</button>
       <div class="eq-dlg">
@@ -468,7 +560,7 @@ export function createEquipmentViewer(container = document.body, options = {}) {
   const ui = Object.fromEntries(
     ['back','archive','viewpanel','viewhead','reset','zoom','zoomOut','rx','rxOut','ry','ryOut','light','prev','next',
      'pagerText','toast','toastSub','mapCode','mapc','dot','code','name','frame','canvas','ph','glbname','tag','actions','discwrap','namecard','grid','story','analyze','analyzeLabel',
-     'prompt','promptText','disc','stats','data','status','storywrap','snd','av','dots','storyWho','storyCount','storyClose','storyText','storyNext'
+     'prompt','promptText','disc','stats','data','status','arch','archCount','archClose','ucard','egrid','storywrap','snd','av','dots','storyWho','storyCount','storyClose','storyText','storyNext'
     ].map((k) => [k, q(k)])
   );
   if (!config.grid) ui.grid.remove();
@@ -768,6 +860,8 @@ export function createEquipmentViewer(container = document.body, options = {}) {
 
   function setEntity(e) {
     entity = e;
+    V = { ...config.view, ...(e.glb?.view || {}) };
+    V.zoom = Math.min(config.zoom.max, Math.max(config.zoom.min, V.zoom));
     resetAnalyze();
     ui.code.textContent = e.id;
     ui.name.textContent = e.name;
@@ -803,6 +897,7 @@ export function createEquipmentViewer(container = document.body, options = {}) {
     }));
     resetView();
     loadModel(e);
+    discover(e);
   }
 
   function setPager(index, total) {
@@ -817,11 +912,110 @@ export function createEquipmentViewer(container = document.body, options = {}) {
     toastTimer = setTimeout(() => ui.toast.classList.add('hide'), config.toastMs);
   }
 
+  /* ----- Archive: stores the explorer card + every equipment card that was discovered ----- */
+  const archive = loadArchive(explorer);
+  function discover(e) {
+    if (!e?.id) return;
+    const isNew = saveEquipment(archive, e);
+    if (isNew) showToast(Object.keys(archive.equipment).length, config.archive.total);
+    else { clearTimeout(toastTimer); ui.toast.classList.add('hide'); }   // already in the archive
+    if (ui.arch.classList.contains('open')) renderArchive();
+  }
+  const esc = (v = '') => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtDate = (ts) => new Date(ts || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  // one boarding-pass ticket (same look as the registration card)
+  function ticketHTML({ stub, tag, glow, kind, title, sub, subSmall, fields, avatar, dot, badgeLabel, badgeValue }) {
+    // no `stub` = no barcode / photo panel on the left (equipment cards), so they differ from the explorer card
+    return `<div class="eq-tkc${stub ? '' : ' nostub'}">
+      ${stub ? `<div class="eq-tks"><i class="eq-bar"></i><span class="eq-vt">${esc(stub)}</span><div class="eq-pnl ${glow}"><b>${esc(tag)}</b></div></div>` : ''}
+      <div class="eq-tkm">
+        <div class="eq-tkh"><i class="eq-pdot ${dot || ''}"></i>Space Exploration Program</div>
+        <div class="eq-tkk">${esc(kind)}</div>
+        <div class="eq-tkn">${esc(title)}</div>
+        ${sub ? `<div class="eq-tkn2${subSmall ? ' sm' : ''}">${esc(sub)}</div>` : ''}
+        <div class="eq-tkf">${fields.map(([l, v, sm]) => `<div><label>${esc(l)}</label><b>${esc(v).replace(/\n/g, '<br>')}</b>${sm ? `<small>${esc(sm)}</small>` : ''}</div>`).join('')}</div>
+      </div>
+      <div class="eq-tkb"><div class="eq-badge">${avatar}</div><div class="eq-bl2">${esc(badgeLabel)}</div><div class="eq-bv">${esc(badgeValue)}</div></div>
+    </div>`;
+  }
+  function renderArchive() {
+    const saved = Object.values(archive.equipment).sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
+    const total = Math.max(config.archive.total, saved.length);
+    ui.archCount.textContent = `${saved.length} / ${total}`;
+
+    // explorer card
+    const u = archive.explorer || {};
+    const parts = String(u.name || 'Explorer').trim().split(/\s+/);
+    const userTk = el('div', 'eq-tk');
+    userTk.innerHTML = ticketHTML({
+      stub: `Explorer mission · ${u.id || ''}`, tag: '#SPACEJOURNEY', glow: 'mars', dot: '',
+      kind: 'Boarding pass: Explorer mission',
+      title: parts[0], sub: parts.slice(1).join(' '),
+      fields: [
+        ['Launch site', 'Earth', 'Mission control'],
+        ['Arrival site', 'Moon - Mars', 'Lunar surface'],
+        ['Scheduled departure', u.departure || fmtDate(u.joinedAt)],
+        ['Explorer ID · Rank', `${u.id || '—'} · ${u.rank || '—'}`],
+      ],
+      avatar: avatarSvg(true), badgeLabel: 'Cards saved', badgeValue: `${saved.length} / ${total}`,
+    });
+    ui.ucard.replaceChildren(userTk);
+
+    // equipment cards
+    const cards = saved.map((c) => {
+      const mars = c.planet === 'mars';
+      const tk = el('div', 'eq-tk sm' + (c.id === entity?.id ? ' cur' : ''));
+      tk.dataset.id = c.id;
+      tk.tabIndex = 0;
+      tk.setAttribute('role', 'button');
+      tk.innerHTML = ticketHTML({
+        stub: null, dot: mars ? 'mars' : 'moon',
+        kind: 'Equipment card: Discovered',
+        title: c.shortName || c.name, sub: c.name, subSmall: true,
+        fields: [
+          ['Site', c.site || '—'],
+          ['Coordinates', c.coordinates || '—'],
+          ['Discovered', fmtDate(c.savedAt)],
+          ['ID · Planet', `${c.id} · ${mars ? 'Mars' : 'Moon'}`],
+        ],
+        avatar: avatarSvg(mars), badgeLabel: 'Status', badgeValue: 'Saved',
+      });
+      return tk;
+    });
+    for (let i = saved.length; i < total; i++) {
+      const lk = el('div', 'eq-tk lock sm');
+      lk.innerHTML = `<div class="eq-tkc">${esc(t.locked)}</div>`;
+      cards.push(lk);
+    }
+    ui.egrid.replaceChildren(...cards);
+  }
+  function openArchive() { renderArchive(); ui.arch.classList.add('open'); }
+  function closeArchive() { ui.arch.classList.remove('open'); }
+  ui.archClose.addEventListener('click', closeArchive);
+  ui.arch.addEventListener('click', (e) => { if (e.target === ui.arch) closeArchive(); });
+  ui.egrid.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.target.click?.(); } });
+  ui.egrid.addEventListener('click', (e) => {
+    const b = e.target.closest('.eq-tk[data-id]');
+    if (!b) return;
+    const i = entities.findIndex((x) => x.id === b.dataset.id);
+    closeArchive();
+    if (i >= 0 && i !== idx) goTo(i);
+  });
+
   /* ----- Top buttons ----- */
   const onBack = () => options.onBack?.();
-  const onArchive = () => options.onArchive?.();
-  const onPrev = () => options.onPrev?.();
-  const onNext = () => options.onNext?.();
+  function goTo(i) {
+    if (entities.length < 2) return;
+    closeStory();
+    closeArchive();
+    idx = (i + entities.length) % entities.length;
+    setPager(idx + 1, pagerTotal);
+    setEntity(entities[idx]);
+    options.onChange?.(entities[idx], idx);
+  }
+  const onArchive = () => { if (options.onArchive) options.onArchive(); else openArchive(); };
+  const onPrev = () => { goTo(idx - 1); options.onPrev?.(); };
+  const onNext = () => { goTo(idx + 1); options.onNext?.(); };
   ui.back.addEventListener('click', onBack);
   ui.archive.addEventListener('click', onArchive);
   ui.prev.addEventListener('click', onPrev);
@@ -889,7 +1083,7 @@ export function createEquipmentViewer(container = document.body, options = {}) {
     ui.snd.innerHTML = svg(muted ? 'mute' : 'sound');
     ui.snd.setAttribute('aria-pressed', String(muted));
   };
-  const onKey = (e) => { if (e.key === 'Escape') closeStory(); };
+  const onKey = (e) => { if (e.key === 'Escape') { closeStory(); closeArchive(); } };
   ui.story.addEventListener('click', openStory);
   ui.storyNext.addEventListener('click', onStoryNext);
   ui.storyClose.addEventListener('click', closeStory);
@@ -915,13 +1109,12 @@ export function createEquipmentViewer(container = document.body, options = {}) {
   });
 
   /* ----- Start ----- */
-  setPager(config.pager.index, config.pager.total);
-  setEntity(entity);
-  showToast();
+  setPager(idx + 1, pagerTotal);
+  setEntity(entity);   // also saves it to the archive + shows the toast when it is new
 
   return {
     root, scene, camera, renderer,
-    setEntity, setPager, showToast,
+    setEntity, setPager, showToast, goTo, openArchive, closeArchive,
     dispose() {
       renderer.setAnimationLoop(null);
       resizeObserver.disconnect();
