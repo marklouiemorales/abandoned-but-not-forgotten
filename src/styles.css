@@ -1,1 +1,236 @@
-body, html { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; font-family: 'Courier New', monospace; background: #000; color: #fff; } #webgl-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; } #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; } .ui-panel, .hud-box, .modal-overlay { pointer-events: auto; } .hud-box { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 800px; background: rgba(15, 23, 42, 0.9); border: 2px solid #fbbf24; border-radius: 8px; padding: 20px; box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); } .warning-screen { background: rgba(153, 27, 27, 0.85); border: 3px solid #ef4444; animation: flashRed 1s infinite alternate; } .hidden { display: none !important; } @keyframes flashRed { from { box-shadow: 0 0 10px #ef4444; } to { box-shadow: 0 0 35px #dc2626; } }
+/* =============================================================================
+   src/style.css  (complete)
+   1. Base
+   2. Boarding pass card (.pass)  - matches the registration card
+   3. Planet HUD (compact cards at the corners so the planet stays the hero)
+   4. Draggable planet cursor
+   5. Signal markers + long vector guide line
+   6. Equipment panel
+   ============================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@400;500;600&display=swap');
+
+/* ---------- 1. Base ---------- */
+:root {
+  --font-ui: 'Orbitron', 'Rajdhani', 'Segoe UI', 'Courier New', monospace;
+  --font-body: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  --ink: #0b1b3d;
+  --ink-soft: #5a6b8c;
+  --card-a: #c4d4ec;
+  --card-b: #f6f9ff;
+  --accent: #7fd0ff;
+  --ok: #2ee59d;
+}
+
+body, html { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%;
+  font-family: 'Courier New', monospace; background: #000; color: #fff; }
+#webgl-canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+#ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+.ui-panel, .hud-box, .modal-overlay { pointer-events: auto; }
+.hud-box { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 800px;
+  background: rgba(15, 23, 42, 0.9); border: 2px solid #fbbf24; border-radius: 8px; padding: 20px;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
+.warning-screen { background: rgba(153, 27, 27, 0.85); border: 3px solid #ef4444; animation: flashRed 1s infinite alternate; }
+.hidden { display: none !important; }
+@keyframes flashRed { from { box-shadow: 0 0 10px #ef4444; } to { box-shadow: 0 0 35px #dc2626; } }
+
+/* ---------- 2. Boarding pass card ---------- */
+.pass-wrap {
+  filter: drop-shadow(0 0 14px rgba(90, 170, 255, .45)) drop-shadow(0 12px 26px rgba(0, 0, 0, .6));
+}
+.pass {
+  --stub-w: 58px;
+  position: relative; display: grid; grid-template-columns: var(--stub-w) 1fr;
+  font-family: var(--font-ui); color: var(--ink);
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0) 55%, rgba(255, 255, 255, .75) 78%, rgba(255, 255, 255, 0) 92%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='48'%3E%3Cpath d='M14 2h14l7 12-7 12H14L7 14z' fill='none' stroke='%230b1b3d' stroke-opacity='.08'/%3E%3C/svg%3E"),
+    linear-gradient(125deg, var(--card-a), var(--card-b) 65%);
+  border-radius: 14px;
+  /* cut top-right corner like the boarding pass + perforation notches at the stub divider */
+  clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+  -webkit-mask:
+    radial-gradient(circle 8px at var(--stub-w) 0, #0000 97%, #000) ,
+    radial-gradient(circle 8px at var(--stub-w) 100%, #0000 97%, #000);
+  -webkit-mask-composite: source-in;
+  mask:
+    radial-gradient(circle 8px at var(--stub-w) 0, #0000 97%, #000),
+    radial-gradient(circle 8px at var(--stub-w) 100%, #0000 97%, #000);
+  mask-composite: intersect;
+  overflow: hidden;
+}
+/* top highlight edge */
+.pass::before { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7), inset 0 1px 0 rgba(255, 255, 255, .9); }
+/* slow scan line */
+.pass::after { content: ''; position: absolute; left: var(--stub-w); right: 0; top: -30%; height: 30%; pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(80, 160, 255, .13), transparent);
+  animation: passScan 6s linear infinite; }
+@keyframes passScan { to { top: 130%; } }
+
+.pass--objective { grid-template-columns: 1fr; -webkit-mask: none; mask: none; }
+.pass--objective::after { left: 0; }
+
+.pass__stub {
+  display: flex; gap: 7px; padding: 12px 8px 12px 12px; box-sizing: border-box;
+  background: linear-gradient(180deg, rgba(11, 27, 61, .1), rgba(11, 27, 61, .04));
+  border-right: 1px dashed rgba(11, 27, 61, .4);
+}
+.pass__barcode { flex: none; width: 24px;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 3px, var(--ink) 3px 4px, transparent 4px 7px, var(--ink) 7px 10px, transparent 10px 12px); }
+.pass__stub-text { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 8px; letter-spacing: .24em;
+  color: var(--ink-soft); white-space: nowrap; align-self: center; }
+
+.pass__body { position: relative; padding: 14px 18px 16px; min-width: 0; }
+.pass__brand { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: .04em; color: var(--ink-soft);
+  padding-bottom: 6px; border-bottom: 1px solid rgba(11, 27, 61, .18); margin-bottom: 8px; }
+.pass__orb { width: 13px; height: 13px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #9ad8ff, #1e4fbf); box-shadow: 0 0 8px rgba(30, 79, 191, .7); }
+.pass__kicker { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px; }
+.pass__kicker--bare { margin: 0; }
+.pass h1 { margin: 0; font-size: 30px; line-height: 1; letter-spacing: .05em; text-transform: uppercase; font-weight: 600; }
+.pass h2 { margin: 3px 0 8px; font-size: 15px; line-height: 1.1; letter-spacing: .05em; text-transform: uppercase; font-weight: 400; }
+.pass h3 { margin: 4px 0 0; font-size: 18px; line-height: 1.2; font-weight: 600; letter-spacing: .03em; }
+.pass p { margin: 0 0 10px; font-size: 13px; line-height: 1.4; color: #1f3258; font-family: var(--font-body); font-weight: 500; }
+.pass__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin: 6px 0 0; }
+.pass__stats > div { border-top: 1px solid rgba(11, 27, 61, .22); padding-top: 4px; min-width: 0; }
+.pass__stats dt { font-size: 7px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); }
+.pass__stats dd { margin: 2px 0 0; font-size: 12px; font-weight: 600; }
+.pass__stats small { font-size: 9px; color: var(--ink-soft); font-family: var(--font-body); }
+.pass__row { display: flex; justify-content: space-between; align-items: center; }
+.pass__count { font-size: 12px; font-weight: 600; }
+.pass__objective { font-weight: 600; margin-top: 6px; }
+
+/* seal on the site card, like the registration card */
+.pass--site .pass__body::after { content: ''; position: absolute; right: 16px; top: 12px; width: 46px; height: 46px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 52%, rgba(11, 27, 61, .5) 54% 58%, transparent 60%),
+    radial-gradient(circle at 35% 30%, #aee0ff, #3a64c9 60%, #1a2f6b);
+  box-shadow: 0 0 0 3px rgba(11, 27, 61, .12), 0 2px 8px rgba(11, 27, 61, .35); }
+.pass--site h1 { padding-right: 56px; }
+
+.pass__segments { display: flex; gap: 6px; margin: 8px 0; }
+.pass__segments i { flex: 1; height: 4px; border-radius: 2px; background: rgba(11, 27, 61, .18); }
+.pass__segments i.is-found { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
+.pass__list { list-style: none; margin: 8px 0 0; padding: 0; }
+.pass__list li { display: flex; gap: 8px; align-items: center; font-size: 11px; padding: 3px 0; letter-spacing: .02em; }
+.pass__list li i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid currentColor; flex: none; }
+.pass__list li.is-found i { background: var(--ok); border-color: var(--ok); }
+
+/* ---------- 3. Planet HUD ---------- */
+.planet-hud { position: fixed; inset: 0; z-index: 20; pointer-events: none;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 22px 26px; box-sizing: border-box; transition: opacity .35s ease; }
+/* edge vignette: darkens the corners so the cards read, keeps the centre clear for the planet */
+.planet-hud::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent 48%, rgba(0, 4, 16, .6) 100%); }
+/* faint targeting rings around the planet (delete these two rules if you don't want them) */
+.planet-hud::after { content: ''; position: fixed; left: 50%; top: 50%; width: min(78vh, 52vw); aspect-ratio: 1; z-index: -1;
+  transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
+  border: 1px solid rgba(127, 208, 255, .14);
+  box-shadow: 0 0 0 26px rgba(127, 208, 255, .03), inset 0 0 60px rgba(127, 208, 255, .05);
+  animation: ringPulse 5s ease-in-out infinite; }
+@keyframes ringPulse { 50% { border-color: rgba(127, 208, 255, .28); } }
+.planet-hud.is-dim { opacity: .2; }
+.planet-hud button, .planet-hud .pass-wrap { pointer-events: auto; }
+.hud-left, .hud-right { display: flex; flex-direction: column; gap: 14px; }
+.hud-left { width: min(350px, 34vw); }
+.hud-right { align-items: flex-end; width: min(270px, 30vw); }
+.hud-buttons { display: flex; gap: 10px; }
+.hud-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(10, 18, 36, .72); border: 1px solid rgba(127, 208, 255, .55); color: #cfe6ff;
+  cursor: pointer; backdrop-filter: blur(6px); transition: box-shadow .2s, transform .2s; }
+.hud-icon:hover { box-shadow: 0 0 16px rgba(127, 208, 255, .7); transform: translateY(-1px); }
+.hud-explorer { display: flex; gap: 16px; align-items: center; padding: 8px 18px;
+  background: rgba(10, 18, 36, .72); border: 1px solid rgba(127, 208, 255, .4); border-radius: 999px;
+  color: #e8f3ff; backdrop-filter: blur(6px); font-family: var(--font-ui); font-size: 12px;
+  box-shadow: 0 0 14px rgba(127, 208, 255, .15); }
+.hud-explorer b { letter-spacing: .05em; }
+.hud-explorer small { display: block; opacity: .6; font-size: 9px; letter-spacing: .08em; }
+.hud-explorer__total { text-align: right; }
+.hud-right .pass-wrap { width: 100%; }
+
+.hud-hint { position: fixed; bottom: 52px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 10px; align-items: center; color: #cfe6ff; font-size: 11px; font-family: var(--font-ui); letter-spacing: .06em;
+  padding: 8px 16px; border-radius: 999px; background: rgba(10, 18, 36, .6);
+  border: 1px solid rgba(127, 208, 255, .3); transition: opacity .5s; }
+.hud-hint em { width: 1px; height: 14px; background: rgba(255, 255, 255, .3); }
+.hud-hint.is-hidden { opacity: 0; }
+.hud-footer { position: fixed; bottom: 18px; left: 0; right: 0; text-align: center;
+  font-size: 10px; letter-spacing: .22em; text-transform: uppercase; opacity: .5; font-family: var(--font-ui); }
+
+/* ---------- 4. Draggable planet ---------- */
+body.planet-draggable { cursor: grab; }
+body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user-select: none; }
+
+/* ---------- 5. Signal markers + long vector guide line ---------- */
+.signal-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
+
+/* .signal is a zero-size anchor sitting exactly on the surface point */
+.signal { --sig: #7fd0ff; position: absolute; left: 0; top: 0; width: 0; height: 0; color: var(--sig);
+  cursor: pointer; will-change: transform; outline: none; font-family: var(--font-ui); }
+
+.signal__dot { position: absolute; left: -12px; top: -12px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; border: 1.5px solid var(--sig); background: rgba(6, 16, 34, .6);
+  box-shadow: 0 0 14px var(--sig), inset 0 0 8px rgba(127, 208, 255, .35); }
+.signal__dot i { width: 7px; height: 7px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px #fff; }
+.signal__dot::before, .signal__dot::after { content: ''; position: absolute; border-radius: 50%; }
+.signal__dot::before { inset: -6px; border: 1px dashed var(--sig); opacity: .8; animation: dotSpin 7s linear infinite; }
+.signal__dot::after { inset: -10px; border: 1px solid var(--sig); animation: signalPing 2s ease-out infinite; }
+@keyframes dotSpin { to { transform: rotate(360deg); } }
+@keyframes signalPing { from { transform: scale(.6); opacity: 1; } to { transform: scale(1.9); opacity: 0; } }
+
+/* the vector: angled leader, long run, ticks and a diamond node */
+.signal__vector { position: absolute; left: 0; top: -64px; width: 220px; height: 64px; overflow: visible;
+  transform-origin: 0 0; pointer-events: none; filter: drop-shadow(0 0 5px var(--sig)); }
+.signal__vector path { fill: none; stroke: var(--sig); stroke-linecap: round; stroke-linejoin: round; }
+.signal__vector .v-base { stroke-width: 2; opacity: .95; }
+.signal__vector .v-flow { stroke: #fff; stroke-width: 2; stroke-dasharray: 10 90; animation: vFlow 2.2s linear infinite; }
+.signal__vector .v-tick { stroke-width: 1.5; opacity: .75; }
+.signal__vector .v-node { fill: var(--sig); stroke: none; }
+@keyframes vFlow { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+
+.signal__text { position: absolute; bottom: 55px; white-space: nowrap; display: flex; flex-direction: column; gap: 1px; }
+.signal__text strong { font-size: 12px; letter-spacing: .06em; color: #fff; text-shadow: 0 0 10px #000, 0 0 3px #000; }
+.signal__text small { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--sig); text-shadow: 0 0 8px #000; }
+
+.signal--right .signal__text { left: 60px; }
+.signal--left .signal__vector { transform: scaleX(-1); }
+.signal--left .signal__text { right: 60px; text-align: right; }
+
+.signal:hover .signal__dot, .signal:focus-visible .signal__dot, .signal.is-active .signal__dot { box-shadow: 0 0 24px var(--sig), 0 0 6px #fff; }
+.signal:hover .signal__vector, .signal.is-active .signal__vector { filter: drop-shadow(0 0 9px var(--sig)); }
+.signal.is-found { --sig: var(--ok); }
+
+/* ---------- 6. Equipment panel ---------- */
+.eq-overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
+  background: rgba(0, 4, 16, .55); backdrop-filter: blur(3px); }
+.eq-overlay[hidden] { display: none; }
+.eq-wrap { width: min(660px, 92vw); }
+.eq-panel__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.eq-panel__close { background: none; border: 0; cursor: pointer; color: inherit; padding: 4px; }
+.eq-panel__slot { margin: 12px 0; min-height: 56px; display: grid; place-items: center; opacity: .75; font-size: 12px;
+  border: 1px dashed rgba(11, 27, 61, .35); border-radius: 8px; font-family: var(--font-body); font-weight: 600; }
+.eq-panel__foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.eq-panel__status { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.eq-btn { padding: 11px 20px; border-radius: 8px; border: 0; cursor: pointer; font-weight: 700;
+  font-family: var(--font-ui); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #fff;
+  background: linear-gradient(135deg, #12306a, #0b1b3d); box-shadow: 0 0 0 1px rgba(127, 208, 255, .5), 0 4px 14px rgba(11, 27, 61, .4);
+  transition: transform .2s, box-shadow .2s; }
+.eq-btn:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px var(--accent), 0 0 18px rgba(127, 208, 255, .6); }
+
+@media (max-width: 900px) {
+  .planet-hud::after { display: none; }
+  .hud-left { width: min(300px, 46vw); }
+  .hud-right { width: min(240px, 42vw); }
+  .pass h1 { font-size: 24px; }
+  .pass--site p, .pass__stats small { display: none; }
+}
+@media (max-width: 640px) {
+  .planet-hud { flex-direction: column; gap: 10px; padding: 12px; overflow-y: auto; }
+  .hud-left, .hud-right { width: 100%; }
+  .hud-right { align-items: stretch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pass::after, .signal__dot::before, .signal__dot::after, .signal__vector .v-flow, .planet-hud::after { animation: none; }
+}
