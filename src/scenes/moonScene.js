@@ -235,6 +235,7 @@ export function createMoonScene(container, options = {}) {
     scene,
     camera,
     renderer,
+    pivot: moonPivot,
     moonPivot,
     ready,
     state,
