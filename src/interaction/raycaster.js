@@ -5,7 +5,7 @@ export function setupPlanetRaycaster(planet, onHardwareSelected) {
   const mouse = new THREE.Vector2();
   const container = planet.renderer.domElement;
 
-  container.addEventListener('click', (event) => {
+  function onClick(event) {
     const rect = container.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -17,5 +17,8 @@ export function setupPlanetRaycaster(planet, onHardwareSelected) {
       planet.state.autoRotate = false;
       onHardwareSelected(intersects[0].object);
     }
-  });
+  }
+
+  container.addEventListener('click', onClick);
+  return () => container.removeEventListener('click', onClick);
 }
