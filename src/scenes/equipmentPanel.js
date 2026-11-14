@@ -27,23 +27,20 @@ export function createEquipmentPanel(parent, options = {}) {
   overlay.className = 'eq-overlay';
   overlay.hidden = true;
   overlay.innerHTML = `
-    <div class="pass-wrap eq-wrap" data-card>
-      <section class="pass eq-panel" role="dialog" aria-modal="true" aria-label="Equipment details">
-        <aside class="pass__stub">
-          <span class="pass__barcode"></span>
-          <span class="pass__stub-text" data-stub></span>
-        </aside>
-        <div class="pass__body eq-panel__inner" data-inner>
+    <div class="eq-wrap" data-card>
+      <section class="hud-panel eq-panel" role="dialog" aria-modal="true" aria-label="Equipment details">
+        <div class="eq-panel__inner" data-inner>
+          <div class="hud-data__head"><span data-stub></span><b>Signal</b></div>
           <header class="eq-panel__head">
             <div>
-              <div class="pass__kicker pass__kicker--bare" data-kicker></div>
+              <div class="hud-kicker hud-kicker--accent" data-kicker></div>
               <h3 data-title></h3>
             </div>
             <button class="eq-panel__close" data-close aria-label="Close">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
             </button>
           </header>
-          <dl class="pass__stats eq-panel__meta" data-meta></dl>
+          <dl class="hud-meta eq-panel__meta" data-meta></dl>
           <div class="eq-panel__slot" data-slot></div>
           <footer class="eq-panel__foot">
             <span class="eq-panel__status" data-status></span>
