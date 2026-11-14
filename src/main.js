@@ -1,11 +1,11 @@
 import './styles.css';
 
 import { createNameInputScene } from './scenes/nameInputScene.js';
-import { createDialogueScene } from './scenes/dialogueScene.js';
+import { createBriefingScene, revealFromBlack } from './scenes/dialogueScene.js';
 import { createMoonScene } from './scenes/moonScene.js';
+import { createPlanetHud } from './scenes/planetHud.js';
 import { createMarsScene } from './scenes/marsScene.js';
 import { createEquipmentViewer } from './scenes/equipmentViewerScene.js';
-import { createPlanetHud } from './scenes/planetHud.js';
 import { createEquipmentPanel } from './scenes/equipmentPanel.js';
 import { createPlanetControls } from './interaction/planetControls.js';
 import { createSignalMarkers } from './interaction/planetSignalMarkers.js';
@@ -129,29 +129,32 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
   };
 }
 
+const introPhase = {
+  enter({ goTo }) {
+    return createBriefingScene(document.body, {
+      stageContainer: planetContainer,          // the 3D canvas goes in #moon-container
+      // name screen shows after the zoom; done(explorer) continues to the dialogue
+      registerExplorer: (done) =>
+        createNameInputScene(document.getElementById('registration-overlay'), {
+          onConfirm: (explorer) => done(explorer),
+        }),
+      onEnd: (explorer) => {
+        // screen is fully black here: build the Moon, then fade the black away
+        goTo('moon', { explorer });
+        revealFromBlack(1400, 400);
+      },
+    });
+  },
+  exit({ scene }) {
+    scene.dispose();
+  },
+};
+
 const phases = {
-  registration: {
-    enter({ goTo }) {
-      return createNameInputScene(document.getElementById('registration-overlay'), {
-        onConfirm: (explorer) => goTo('briefing', { explorer }),
-      });
-    },
-    exit({ scene }) {
-      scene.dispose();
-    },
-  },
-  briefing: {
-    enter({ state, goTo }) {
-      return createDialogueScene(document.body, {
-        explorer: state.explorer,
-        // Spaceship/launch phases don't exist yet, so go straight to the Moon
-        onAccept: (explorer) => goTo('moon', { explorer }),
-      });
-    },
-    exit({ scene }) {
-      scene.dispose();
-    },
-  },
+  // Ship intro ("Start journey") -> zoom on the cockpit -> explorer name -> dialogue
+  // -> accept -> the ship launches -> fade to black -> Moon.
+  registration: introPhase,
+  briefing: introPhase,
   equipment: {
     enter({ state, goTo }) {
       const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
