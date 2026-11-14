@@ -1,11 +1,11 @@
 import './styles.css';
 
 import { createNameInputScene } from './scenes/nameInputScene.js';
-import { createDialogueScene } from './scenes/dialogueScene.js';
+import { createBriefingScene, revealFromBlack } from './scenes/dialogueScene.js';
 import { createMoonScene } from './scenes/moonScene.js';
+import { createPlanetHud } from './scenes/planetHud.js';
 import { createMarsScene } from './scenes/marsScene.js';
 import { createEquipmentViewer } from './scenes/equipmentViewerScene.js';
-import { createPlanetHud } from './scenes/planetHud.js';
 import { createEquipmentPanel } from './scenes/equipmentPanel.js';
 import { createPlanetControls } from './interaction/planetControls.js';
 import { createSignalMarkers } from './interaction/planetSignalMarkers.js';
@@ -18,8 +18,27 @@ import { SURVEYOR3 } from '../entities/moon/surveyor3.js';
 import { INGENUITY } from '../entities/mars/ingenuity.js';
 import { INSIGHT } from '../entities/mars/insight.js';
 import { SOJOURNER } from '../entities/mars/sojourner.js';
+// The three below are imported as whole modules, then pick()ed, so it works whatever
+// you named their export (SURVEYOR3, INSIGHT, SOJOURNER ... or a default export).
+import * as surveyor3Mod from '../entities/moon/surveyor3.js';
+import * as insightMod from '../entities/mars/insight.js';
+import * as sojournerMod from '../entities/mars/sojourner.js';
 import { MOON_LOCATION, MOON_SIGNALS } from '../entities/moon/moonSignals.js';
 import { MARS_LOCATION, MARS_SIGNALS } from '../entities/mars/marsSignals.js';
+
+// default export, else the first exported object that looks like an entity (has a `glb` field)
+const pick = (mod) =>
+  mod.default ?? Object.values(mod).find((v) => v && typeof v === 'object' && v.glb);
+
+const SURVEYOR3 = pick(surveyor3Mod);
+const INSIGHT = pick(insightMod);
+const SOJOURNER = pick(sojournerMod);
+
+[['surveyor3', SURVEYOR3], ['insight', INSIGHT], ['sojourner', SOJOURNER]].forEach(([id, entity]) => {
+  if (!entity) {
+    console.warn(`Equipment "${id}": no entity found in its file (needs a default export or an object with a glb field).`);
+  }
+});
 
 const planetContainer = document.getElementById('moon-container');
 const query = new URLSearchParams(window.location.search);
@@ -32,8 +51,17 @@ const query = new URLSearchParams(window.location.search);
 //   /?view=insight    -> jump straight to the InSight equipment page
 //   /?view=sojourner  -> jump straight to the Sojourner equipment page
 //   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment)
+//   /?view=eagle | surveyor3 | lrv | sojourner | ingenuity | insight -> that equipment page
+//   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment)
 const view = query.get('view');
-const VIEW_ENTITIES = { eagle: EAGLE, lrv: LRV, surveyor3: SURVEYOR3, ingenuity: INGENUITY, insight: INSIGHT, sojourner: SOJOURNER };
+const VIEW_ENTITIES = {
+  eagle: EAGLE,
+  surveyor3: SURVEYOR3,
+  lrv: LRV,
+  sojourner: SOJOURNER,
+  ingenuity: INGENUITY,
+  insight: INSIGHT,
+};
 const requestedEntity = VIEW_ENTITIES[view] || EAGLE;
 const requestedPhase = VIEW_ENTITIES[view]
   ? 'equipment'
@@ -41,13 +69,18 @@ const requestedPhase = VIEW_ENTITIES[view]
 
 // ---------------------------------------------------------------------------
 // Equipment pages. The key MUST match `equipment.id` in the signals data
-// (moonSignals.js / marsSignals.js). If your ids are different, rename the key here.
+// (moonSignals.js / marsSignals.js):
+//   Moon: eagle, surveyor3, lrv        Mars: sojourner, ingenuity, insight
 // A signal whose id is missing falls back to the dev-shortcut entity (Eagle by default).
 // ---------------------------------------------------------------------------
 const ENTITIES = {
+  // Moon
   eagle: EAGLE,
-  lrv1: LRV,
+  surveyor3: SURVEYOR3,
   lrv: LRV,
+  lrv1: LRV,            // old id, kept so nothing breaks
+  // Mars
+  sojourner: SOJOURNER,
   ingenuity: INGENUITY,
   insight: INSIGHT,
   sojourner: SOJOURNER,
@@ -56,10 +89,12 @@ const ENTITIES = {
   // 'mars-equipment-2': MARS_TWO,
 };
 
-// What the < / > pager walks through on each planet. Add new equipment here as you write it.
+// What the < / > pager walks through on each planet (same order as the signals).
 const PLANET_EQUIPMENT = {
   moon: [EAGLE, LRV, SURVEYOR3],
   mars: [INGENUITY, INSIGHT, SOJOURNER],
+  moon: [EAGLE, SURVEYOR3, LRV].filter(Boolean),
+  mars: [SOJOURNER, INGENUITY, INSIGHT].filter(Boolean),
 };
 
 const TOTAL_MISSIONS = 6;      // 3 Moon + 3 Mars
@@ -98,7 +133,7 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
 
       let markers;
       const panel = createEquipmentPanel(document.body, {
-        // "Inspect equipment" / "Open equipment": log it, then go to its page
+        // "Inspect equipment" / "Open equipment": log it, then go to ITS page
         onOpen: (signal) => {
           recovered.add(signal.equipment.id);
           goTo('equipment', { explorer, planet: key, entityId: signal.equipment.id });
@@ -138,44 +173,49 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
   };
 }
 
+const introPhase = {
+  enter({ goTo }) {
+    return createBriefingScene(document.body, {
+      stageContainer: planetContainer,          // the 3D canvas goes in #moon-container
+      // name screen shows after the zoom; done(explorer) continues to the dialogue
+      registerExplorer: (done) =>
+        createNameInputScene(document.getElementById('registration-overlay'), {
+          onConfirm: (explorer) => done(explorer),
+        }),
+      onEnd: (explorer) => {
+        // screen is fully black here: build the Moon, then fade the black away
+        goTo('moon', { explorer });
+        revealFromBlack(1400, 400);
+      },
+    });
+  },
+  exit({ scene }) {
+    scene.dispose();
+  },
+};
+
 const phases = {
-  registration: {
-    enter({ goTo }) {
-      return createNameInputScene(document.getElementById('registration-overlay'), {
-        onConfirm: (explorer) => goTo('briefing', { explorer }),
-      });
-    },
-    exit({ scene }) {
-      scene.dispose();
-    },
-  },
-  briefing: {
-    enter({ state, goTo }) {
-      return createDialogueScene(document.body, {
-        explorer: state.explorer,
-        // Spaceship/launch phases don't exist yet, so go straight to the Moon
-        onAccept: (explorer) => goTo('moon', { explorer }),
-      });
-    },
-    exit({ scene }) {
-      scene.dispose();
-    },
-  },
+  // Ship intro ("Start journey") -> zoom on the cockpit -> explorer name -> dialogue
+  // -> accept -> the ship launches -> fade to black -> Moon.
+  registration: introPhase,
+  briefing: introPhase,
   equipment: {
     enter({ state, goTo }) {
       const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
       const entity = ENTITIES[state.entityId] || requestedEntity;
-      const entities = PLANET_EQUIPMENT[entity.planet] || [entity];
-      const backTo = (state.planet || entity.planet) === 'mars' ? 'mars' : 'moon';
+      // planet comes from where you clicked (state.planet), else from the entity itself
+      const planetKey = (state.planet || entity.planet) === 'mars' ? 'mars' : 'moon';
+      const entities = PLANET_EQUIPMENT[planetKey].includes(entity) ? PLANET_EQUIPMENT[planetKey] : [entity];
+      if (state.entityId) recovered.add(state.entityId);   // not for /?view= dev shortcuts
       return createEquipmentViewer(document.body, {
         entities,                          // the < / > pager walks through these
         entity,                            // which one opens first
         explorer,
         config: {
-          pager: { index: 1, total: 3 },   // 3 equipment per planet
+          pager: { index: Math.max(entities.indexOf(entity), 0) + 1, total: entities.length },
           archive: { saved: recovered.size, total: TOTAL_MISSIONS },
         },
-        onBack: () => goTo(backTo),
+        onBack: () => goTo(planetKey),
         // no onArchive / onPrev / onNext: the viewer handles them itself
       });
     },

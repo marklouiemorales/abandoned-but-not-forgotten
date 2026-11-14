@@ -1,13 +1,16 @@
 // entities/mars/marsSignals.js   (project root, next to /src and /public)
 // -----------------------------------------------------------------------------
-// DATA ONLY. Same shape as entities/moon/moonSignals.js, so the exact same HUD,
-// markers, controls and panel work on Mars.
+// DATA ONLY. Same shape as entities/moon/moonSignals.js, so the same HUD, markers,
+// controls and panel work on Mars.
 //
-// The equipment below is PLACEHOLDER. Replace names / ids / meta / lat / lon with
-// your real three Mars pieces, and add each entity to the ENTITIES registry in
-// src/main.js (equipment.id must match the registry key).
+// equipment.id MUST match the key in the ENTITIES registry in src/main.js:
+//   'sojourner' -> entities/mars/sojourner.js
+//   'ingenuity' -> entities/mars/ingenuity.js
+//   'insight'   -> entities/mars/insight.js
 //
 // Signals:  lat -90..90 (north +), lon -180..180 (east +).
+// The lat/lon below are spread around the planet so the signals are easy to find.
+// Edit them freely.
 // -----------------------------------------------------------------------------
 
 export const MARS_LOCATION = {
@@ -28,43 +31,43 @@ export const MARS_LOCATION = {
 
 export const MARS_SIGNALS = [
   {
-    id: 'mars-signal-1', index: 1, lat: 10, lon: -10,
+    id: 'mars-signal-1', index: 1, lat: 19, lon: -33,
     label: 'Unknown signal', hint: 'Select to investigate',
     equipment: {
-      id: 'mars-equipment-1',
-      name: 'Mars equipment 1 (placeholder)',
+      id: 'sojourner',
+      name: 'Sojourner Rover',
       meta: [
-        { label: 'Mission', value: 'TBD' },
-        { label: 'Year', value: 'TBD' },
-        { label: 'Type', value: 'TBD' },
+        { label: 'Mission', value: 'Mars Pathfinder' },
+        { label: 'Year', value: '1997' },
+        { label: 'Type', value: 'Rover' },
       ],
       mount: null,
     },
   },
   {
-    id: 'mars-signal-2', index: 2, lat: -20, lon: 100,
+    id: 'mars-signal-2', index: 2, lat: 18, lon: 77,
     label: 'Unknown signal', hint: 'Select to investigate',
     equipment: {
-      id: 'mars-equipment-2',
-      name: 'Mars equipment 2 (placeholder)',
+      id: 'ingenuity',
+      name: 'Ingenuity Helicopter',
       meta: [
-        { label: 'Mission', value: 'TBD' },
-        { label: 'Year', value: 'TBD' },
-        { label: 'Type', value: 'TBD' },
+        { label: 'Mission', value: 'Mars 2020' },
+        { label: 'Year', value: '2021' },
+        { label: 'Type', value: 'Helicopter' },
       ],
       mount: null,
     },
   },
   {
-    id: 'mars-signal-3', index: 3, lat: 25, lon: -130,
+    id: 'mars-signal-3', index: 3, lat: 5, lon: 135,
     label: 'Unknown signal', hint: 'Select to investigate',
     equipment: {
-      id: 'mars-equipment-3',
-      name: 'Mars equipment 3 (placeholder)',
+      id: 'insight',
+      name: 'InSight Lander',
       meta: [
-        { label: 'Mission', value: 'TBD' },
-        { label: 'Year', value: 'TBD' },
-        { label: 'Type', value: 'TBD' },
+        { label: 'Mission', value: 'InSight' },
+        { label: 'Year', value: '2018' },
+        { label: 'Type', value: 'Robotic lander' },
       ],
       mount: null,
     },

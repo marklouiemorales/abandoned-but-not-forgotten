@@ -62,7 +62,7 @@ export const MOON_SIGNALS = [
     id: 'moon-signal-3', index: 3, lat: 22, lon: -135,
     label: 'Unknown signal', hint: 'Select to investigate',
     equipment: {
-      id: 'lrv1',
+      id: 'lrv',
       name: 'Lunar Roving Vehicle 1 (LRV-1)',
       meta: [
         { label: 'Mission', value: 'Apollo 15' },
