@@ -28,9 +28,9 @@ export const NAME_INPUT_CONFIG = {
     title: 'REGISTER AS AN EXPLORER',
     cardHeaderLeft: 'Explorer ID',
     cardHeaderRight: '',            // final project title goes here later (kept configurable)
-    nameLabel: 'Your name',
-    namePlaceholder: 'Enter your name',
-    hint: 'Enter your name to receive your explorer ID.',
+    nameLabel: 'Enter your name to receive explorer ID.',
+    namePlaceholder: '          ',
+    hint: ' ',
     emptyError: 'Please enter your name first.',
     button: 'Confirm identity',
     firstPlaceholder: 'FIRSTNAME',
