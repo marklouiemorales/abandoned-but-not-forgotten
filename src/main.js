@@ -14,6 +14,7 @@ import { createGameState, GAME_PHASES } from './state/gameState.js';
 // entities/ sits next to src/
 import { EAGLE } from '../entities/moon/eagle.js';
 import { LRV } from '../entities/moon/lrv.js';
+import { INGENUITY } from '../entities/mars/ingenuity.js';
 import { MOON_LOCATION, MOON_SIGNALS } from '../entities/moon/moonSignals.js';
 import { MARS_LOCATION, MARS_SIGNALS } from '../entities/mars/marsSignals.js';
 
@@ -21,24 +22,35 @@ const planetContainer = document.getElementById('moon-container');
 const query = new URLSearchParams(window.location.search);
 
 // DEV SHORTCUTS
-//   /?view=eagle  -> jump straight to the Eagle equipment page
-//   /?view=lrv    -> jump straight to the Moon Buggy equipment page
-//   /?phase=moon  -> jump to a phase (registration, briefing, moon, mars, equipment)
+//   /?view=eagle      -> jump straight to the Eagle equipment page
+//   /?view=lrv        -> jump straight to the Moon Buggy equipment page
+//   /?view=ingenuity  -> jump straight to the Ingenuity equipment page
+//   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment)
 const view = query.get('view');
-const requestedEntity = view === 'lrv' ? LRV : EAGLE;
-const requestedPhase =
-  view === 'eagle' || view === 'lrv' ? 'equipment' : query.get('phase') || query.get('planet');
+const VIEW_ENTITIES = { eagle: EAGLE, lrv: LRV, ingenuity: INGENUITY };
+const requestedEntity = VIEW_ENTITIES[view] || EAGLE;
+const requestedPhase = VIEW_ENTITIES[view]
+  ? 'equipment'
+  : query.get('phase') || query.get('planet');
 
 // ---------------------------------------------------------------------------
-// Equipment pages. The key MUST match `equipment.id` in the signals data.
-// Add each entity here as you write its .js (surveyor3, lrv1, mars pieces...).
-// A signal whose id is missing falls back to EAGLE so the flow never breaks.
+// Equipment pages. The key MUST match `equipment.id` in the signals data
+// (moonSignals.js / marsSignals.js). If your ids are different, rename the key here.
+// A signal whose id is missing falls back to the dev-shortcut entity (Eagle by default).
 // ---------------------------------------------------------------------------
 const ENTITIES = {
   eagle: EAGLE,
+  lrv1: LRV,
+  lrv: LRV,
+  ingenuity: INGENUITY,
   // surveyor3: SURVEYOR3,
-  // lrv1: LRV1,
-  // 'mars-equipment-1': MARS_ONE,
+  // 'mars-equipment-2': MARS_TWO,
+};
+
+// What the < / > pager walks through on each planet. Add new equipment here as you write it.
+const PLANET_EQUIPMENT = {
+  moon: [EAGLE, LRV],
+  mars: [INGENUITY],
 };
 
 const TOTAL_MISSIONS = 6;      // 3 Moon + 3 Mars
@@ -132,7 +144,6 @@ const phases = {
     enter({ state, goTo }) {
       return createDialogueScene(document.body, {
         explorer: state.explorer,
-        // Spaceship/launch phases don't exist yet, so go to the Moon for now
         // Spaceship/launch phases don't exist yet, so go straight to the Moon
         onAccept: (explorer) => goTo('moon', { explorer }),
       });
@@ -144,35 +155,25 @@ const phases = {
   equipment: {
     enter({ state, goTo }) {
       const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
-      const entity = ENTITIES[state.entityId] || EAGLE;
-      const backTo = state.planet === 'mars' ? 'mars' : 'moon';
+      const entity = ENTITIES[state.entityId] || requestedEntity;
+      const entities = PLANET_EQUIPMENT[entity.planet] || [entity];
+      const backTo = (state.planet || entity.planet) === 'mars' ? 'mars' : 'moon';
       return createEquipmentViewer(document.body, {
-        entities: [EAGLE, LRV],           // the < / > pager walks through these
-        entity: requestedEntity,          // which one opens first
-        explorer,
-        config: { pager: { index: 1, total: 3 }, archive: { saved: 1, total: 6 } },
-        onBack: () => goTo('moon'),
-        // no onArchive / onPrev / onNext: the viewer handles them itself
-        entity,
+        entities,                          // the < / > pager walks through these
+        entity,                            // which one opens first
         explorer,
         config: {
-          pager: { index: 1, total: 3 },
+          pager: { index: 1, total: 3 },   // 3 equipment per planet
           archive: { saved: recovered.size, total: TOTAL_MISSIONS },
         },
         onBack: () => goTo(backTo),
-        onArchive: () => console.log('Open archive', explorer),
-        onPrev: () => console.log('Previous equipment'),
-        onNext: () => console.log('Next equipment'),
+        // no onArchive / onPrev / onNext: the viewer handles them itself
       });
     },
     exit({ scene }) {
       scene.dispose();
     },
   },
-  moon: createPlanetPhase(createMoonScene, 'Moon', '/assets/models/moon/moon.glb', (goTo) =>
-    goTo('equipment')
-  ),
-  mars: createPlanetPhase(createMarsScene, 'Mars', '/assets/models/mars/mars.glb'),
   moon: createPlanetPhase({
     key: 'moon',
     createScene: createMoonScene,
