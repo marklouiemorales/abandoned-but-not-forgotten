@@ -13,6 +13,7 @@ import { createGameState, GAME_PHASES } from './state/gameState.js';
 
 // entities/ sits next to src/
 import { EAGLE } from '../entities/moon/eagle.js';
+import { LRV } from '../entities/moon/lrv.js';
 import { MOON_LOCATION, MOON_SIGNALS } from '../entities/moon/moonSignals.js';
 import { MARS_LOCATION, MARS_SIGNALS } from '../entities/mars/marsSignals.js';
 
@@ -21,9 +22,12 @@ const query = new URLSearchParams(window.location.search);
 
 // DEV SHORTCUTS
 //   /?view=eagle  -> jump straight to the Eagle equipment page
+//   /?view=lrv    -> jump straight to the Moon Buggy equipment page
 //   /?phase=moon  -> jump to a phase (registration, briefing, moon, mars, equipment)
+const view = query.get('view');
+const requestedEntity = view === 'lrv' ? LRV : EAGLE;
 const requestedPhase =
-  query.get('view') === 'eagle' ? 'equipment' : query.get('phase') || query.get('planet');
+  view === 'eagle' || view === 'lrv' ? 'equipment' : query.get('phase') || query.get('planet');
 
 // ---------------------------------------------------------------------------
 // Equipment pages. The key MUST match `equipment.id` in the signals data.
@@ -128,6 +132,7 @@ const phases = {
     enter({ state, goTo }) {
       return createDialogueScene(document.body, {
         explorer: state.explorer,
+        // Spaceship/launch phases don't exist yet, so go to the Moon for now
         // Spaceship/launch phases don't exist yet, so go straight to the Moon
         onAccept: (explorer) => goTo('moon', { explorer }),
       });
@@ -142,6 +147,12 @@ const phases = {
       const entity = ENTITIES[state.entityId] || EAGLE;
       const backTo = state.planet === 'mars' ? 'mars' : 'moon';
       return createEquipmentViewer(document.body, {
+        entities: [EAGLE, LRV],           // the < / > pager walks through these
+        entity: requestedEntity,          // which one opens first
+        explorer,
+        config: { pager: { index: 1, total: 3 }, archive: { saved: 1, total: 6 } },
+        onBack: () => goTo('moon'),
+        // no onArchive / onPrev / onNext: the viewer handles them itself
         entity,
         explorer,
         config: {
@@ -158,6 +169,10 @@ const phases = {
       scene.dispose();
     },
   },
+  moon: createPlanetPhase(createMoonScene, 'Moon', '/assets/models/moon/moon.glb', (goTo) =>
+    goTo('equipment')
+  ),
+  mars: createPlanetPhase(createMarsScene, 'Mars', '/assets/models/mars/mars.glb'),
   moon: createPlanetPhase({
     key: 'moon',
     createScene: createMoonScene,
