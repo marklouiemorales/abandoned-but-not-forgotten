@@ -14,10 +14,8 @@ import { createGameState, GAME_PHASES } from './state/gameState.js';
 // entities/ sits next to src/
 import { EAGLE } from '../entities/moon/eagle.js';
 import { LRV } from '../entities/moon/lrv.js';
-import { SURVEYOR3 } from '../entities/moon/surveyor3.js';
 import { INGENUITY } from '../entities/mars/ingenuity.js';
-import { INSIGHT } from '../entities/mars/insight.js';
-import { SOJOURNER } from '../entities/mars/sojourner.js';
+
 // The three below are imported as whole modules, then pick()ed, so it works whatever
 // you named their export (SURVEYOR3, INSIGHT, SOJOURNER ... or a default export).
 import * as surveyor3Mod from '../entities/moon/surveyor3.js';
@@ -51,8 +49,6 @@ const query = new URLSearchParams(window.location.search);
 //   /?view=insight    -> jump straight to the InSight equipment page
 //   /?view=sojourner  -> jump straight to the Sojourner equipment page
 //   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment)
-//   /?view=eagle | surveyor3 | lrv | sojourner | ingenuity | insight -> that equipment page
-//   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment)
 const view = query.get('view');
 const VIEW_ENTITIES = {
   eagle: EAGLE,
@@ -78,21 +74,16 @@ const ENTITIES = {
   eagle: EAGLE,
   surveyor3: SURVEYOR3,
   lrv: LRV,
-  lrv1: LRV,            // old id, kept so nothing breaks
+  lrv1: LRV, // old id, kept so nothing breaks
   // Mars
   sojourner: SOJOURNER,
   ingenuity: INGENUITY,
   insight: INSIGHT,
-  sojourner: SOJOURNER,
   pathfinder: SOJOURNER,
-  surveyor3: SURVEYOR3,
-  // 'mars-equipment-2': MARS_TWO,
 };
 
 // What the < / > pager walks through on each planet (same order as the signals).
 const PLANET_EQUIPMENT = {
-  moon: [EAGLE, LRV, SURVEYOR3],
-  mars: [INGENUITY, INSIGHT, SOJOURNER],
   moon: [EAGLE, SURVEYOR3, LRV].filter(Boolean),
   mars: [SOJOURNER, INGENUITY, INSIGHT].filter(Boolean),
 };
@@ -176,7 +167,7 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
 const introPhase = {
   enter({ goTo }) {
     return createBriefingScene(document.body, {
-      stageContainer: planetContainer,          // the 3D canvas goes in #moon-container
+      stageContainer: planetContainer, // the 3D canvas goes in #moon-container
       // name screen shows after the zoom; done(explorer) continues to the dialogue
       registerExplorer: (done) =>
         createNameInputScene(document.getElementById('registration-overlay'), {
@@ -206,10 +197,10 @@ const phases = {
       // planet comes from where you clicked (state.planet), else from the entity itself
       const planetKey = (state.planet || entity.planet) === 'mars' ? 'mars' : 'moon';
       const entities = PLANET_EQUIPMENT[planetKey].includes(entity) ? PLANET_EQUIPMENT[planetKey] : [entity];
-      if (state.entityId) recovered.add(state.entityId);   // not for /?view= dev shortcuts
+      if (state.entityId) recovered.add(state.entityId); // not for /?view= dev shortcuts
       return createEquipmentViewer(document.body, {
-        entities,                          // the < / > pager walks through these
-        entity,                            // which one opens first
+        entities, // the < / > pager walks through these
+        entity,   // which one opens first
         explorer,
         config: {
           pager: { index: Math.max(entities.indexOf(entity), 0) + 1, total: entities.length },
