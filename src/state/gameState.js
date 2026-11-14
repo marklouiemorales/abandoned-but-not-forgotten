@@ -6,6 +6,7 @@ export const GAME_PHASES = Object.freeze([
   'moon',
   'transit',
   'marsLanding',
+  'equipment',
   'mars',
   'return',
   'certificate',

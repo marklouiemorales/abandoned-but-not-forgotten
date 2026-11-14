@@ -9,38 +9,19 @@ import { EAGLE } from '../entities/moon/eagle.js';
 
 const planetContainer = document.getElementById('moon-container');
 const query = new URLSearchParams(window.location.search);
-const requestedPhase = query.get('phase') || query.get('planet');
-const preferredPlanet = query.get('planet') === 'moon' ? 'moon' : 'mars';
 
-function startPlanet(explorer, forcePlanet) {
-  const planetContainer = document.getElementById('moon-container');
-  const useMoon = (forcePlanet || query.get('planet')) === 'moon';
-  const targetPlanet = useMoon ? 'moon' : 'mars';
-  const createScene = targetPlanet === 'moon' ? createMoonScene : createMarsScene;
-  const modelUrl = targetPlanet === 'moon'
-    ? '/assets/models/moon/moon.glb'
-    : '/assets/models/mars/mars.glb';
+// DEV SHORTCUTS
+//   /?view=eagle  -> jump straight to the Eagle equipment page
+//   /?phase=moon  -> jump to a phase (registration, briefing, moon, mars, equipment)
+const requestedPhase =
+  query.get('view') === 'eagle' ? 'equipment' : query.get('phase') || query.get('planet');
 
-  const planet = createScene(planetContainer, {
-    modelUrl,
-    fill: 2.0,
-    rotationSpeed: 0.0008,
-  });
+// The story starts on the Moon, so Moon is the default
+const preferredPlanet = query.get('planet') === 'mars' ? 'mars' : 'moon';
 
-  planet.ready.then(() => {
-    console.log(`3D ${targetPlanet === 'moon' ? 'Moon' : 'Mars'} loaded and ready to explore!`, explorer);
-  });
-
-  const disposeRaycaster = setupPlanetRaycaster(planet, (targetObject) => {
-    console.log('Target locked:', targetObject.name);
-  });
-
-  return { planet, disposeRaycaster };
-}
-
-function createPlanetPhase(createScene, label, modelUrl) {
+function createPlanetPhase(createScene, label, modelUrl, onTarget) {
   return {
-    enter({ state }) {
+    enter({ state, goTo }) {
       const planet = createScene(planetContainer, {
         modelUrl,
         fill: 2.0,
@@ -53,6 +34,7 @@ function createPlanetPhase(createScene, label, modelUrl) {
 
       const disposeRaycaster = setupPlanetRaycaster(planet, (targetObject) => {
         console.log('Target locked:', targetObject.name);
+        onTarget?.(goTo);
       });
 
       return { planet, disposeRaycaster };
@@ -62,60 +44,6 @@ function createPlanetPhase(createScene, label, modelUrl) {
       scene.planet.dispose();
     },
   };
-}
-
-// Equipment page: Apollo 11 Eagle (add public/assets/models/moon/eagle.glb to see the 3D model)
-function startEagle(explorer) {
-  const viewer = createEquipmentViewer(document.body, {
-    entity: EAGLE,
-    explorer,
-    config: { pager: { index: 1, total: 3 }, archive: { saved: 1, total: 6 } },
-    onBack: () => {
-      viewer.dispose();
-      startPlanet(explorer, 'moon');
-    },
-    onArchive: () => console.log('Open archive', explorer),
-    onPrev: () => console.log('Previous equipment'),
-    onNext: () => console.log('Next equipment'),
-  });
-}
-
-// Spaceship comes right after the mission is accepted
-function startSpaceship(explorer) {
-  console.log('Mission accepted by:', explorer);
-  startEagle(explorer);
-}
-
-// Dialogue: loading -> registration complete -> welcome -> briefing -> accept
-function startDialogue(explorer) {
-  const dialogue = createDialogueScene(document.body, {
-    explorer,
-    onAccept: (e) => {
-      dialogue.dispose();
-      startSpaceship(e);
-      return { planet, disposeRaycaster };
-    },
-    exit({ scene }) {
-      scene.disposeRaycaster();
-      scene.planet.dispose();
-    },
-  });
-}
-// DEV SHORTCUT: open  http://localhost:5173/?view=eagle  to jump straight to the Eagle page
-const view = new URLSearchParams(window.location.search).get('view');
-
-if (view === 'eagle') {
-  startEagle({ name: 'Commander', id: 'EX-0000', rank: 'Recruit' });
-} else {
-  const registration = createNameInputScene(
-    document.getElementById('registration-overlay'),
-    {
-      onConfirm: (explorer) => {
-        registration.dispose();
-        startDialogue(explorer);
-      },
-    }
-  );
 }
 
 const phases = {
@@ -136,23 +64,35 @@ const phases = {
     enter({ state, goTo }) {
       return createDialogueScene(document.body, {
         explorer: state.explorer,
-        onAccept: (explorer) => goTo(preferredPlanet, { explorer }),
+        // Spaceship/launch phases don't exist yet, so go to the Eagle page for now
+          onAccept: (explorer) => goTo('moon', { explorer }),
       });
     },
     exit({ scene }) {
       scene.dispose();
     },
   },
-  moon: createPlanetPhase(
-    createMoonScene,
-    'Moon',
-    '/assets/models/moon/moon.glb'
+  equipment: {
+    enter({ state, goTo }) {
+      const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
+      return createEquipmentViewer(document.body, {
+        entity: EAGLE,
+        explorer,
+        config: { pager: { index: 1, total: 3 }, archive: { saved: 1, total: 6 } },
+        onBack: () => goTo('moon'),
+        onArchive: () => console.log('Open archive', explorer),
+        onPrev: () => console.log('Previous equipment'),
+        onNext: () => console.log('Next equipment'),
+      });
+    },
+    exit({ scene }) {
+      scene.dispose();
+    },
+  },
+   moon: createPlanetPhase(createMoonScene, 'Moon', '/assets/models/moon/moon.glb', (goTo) =>
+    goTo('equipment')
   ),
-  mars: createPlanetPhase(
-    createMarsScene,
-    'Mars',
-    '/assets/models/mars/mars.glb'
-  ),
+  mars: createPlanetPhase(createMarsScene, 'Mars', '/assets/models/mars/mars.glb'),
 };
 
 const game = createGameState(phases);
