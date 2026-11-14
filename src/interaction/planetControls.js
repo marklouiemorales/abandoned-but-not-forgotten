@@ -76,6 +76,19 @@ export function createPlanetControls(planet, options = {}) {
   let vx = 0, vy = 0;           // radians per frame (pitch, yaw)
   let suppressClick = false;
   let disposed = false;
+  let focus = null;             // animated "turn this surface point toward the camera"
+
+  // dir = unit direction in pivot-local space (e.g. an anchor's position, normalised).
+  // Assumes the camera looks down -Z (planet front faces +Z), like the scenes do.
+  function focusOn(dir, duration = 900) {
+    const r = Math.hypot(dir.x, dir.z) || 1e-6;
+    const toY = Math.atan2(-dir.x, dir.z);
+    const toX = Math.max(-maxPitch, Math.min(maxPitch, Math.atan2(dir.y, r)));
+    let dY = toY - pivot.rotation.y;
+    dY = Math.atan2(Math.sin(dY), Math.cos(dY));          // shortest way round
+    focus = { fromY: pivot.rotation.y, dY, fromX: pivot.rotation.x, dX: toX - pivot.rotation.x, t: 0, duration };
+    vx = vy = 0;
+  }
 
   function pxPerRad() {
     const h = canvas.clientHeight || window.innerHeight;
@@ -89,6 +102,7 @@ export function createPlanetControls(planet, options = {}) {
     if (dragging || holds.has('selected')) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (e.target instanceof Element && e.target.closest(UI_SELECTOR)) return;
+    focus = null;
     dragging = true;
     started = false;
     activeId = e.pointerId;
@@ -154,6 +168,16 @@ export function createPlanetControls(planet, options = {}) {
 
   planet.onUpdate((dt) => {
     if (disposed) return;
+    if (focus && !dragging) {
+      focus.t += dt * 1000;
+      const k = Math.min(1, focus.t / focus.duration);
+      const e = 1 - Math.pow(1 - k, 3);                    // ease-out
+      pivot.rotation.y = focus.fromY + focus.dY * e;
+      pivot.rotation.x = focus.fromX + focus.dX * e;
+      if (k >= 1) { focus = null; idleUntil = performance.now() + idleResumeMs; }
+      planet.state.autoRotate = false;
+      return;
+    }
     if (!dragging && (Math.abs(vx) > 1e-5 || Math.abs(vy) > 1e-5)) {
       pivot.rotation.y += vy * dt * 60;
       pivot.rotation.x = clampPitch(pivot.rotation.x + vx * dt * 60);
@@ -165,6 +189,7 @@ export function createPlanetControls(planet, options = {}) {
   });
 
   return {
+    focusOn,
     hold(key) { holds.add(key); },
     release(key) { holds.delete(key); },
     dispose() {
