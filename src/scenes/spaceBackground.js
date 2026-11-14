@@ -3,7 +3,8 @@
 // The same space background as the registration ID card scene: dark nebula +
 // twinkling stars + soft mouse parallax. Own renderer, own loop, own dispose().
 //
-//   const bg = createSpaceBackground(someDiv);   // someDiv should be position:absolute/fixed, sized
+//   const bg = createSpaceBackground(someDiv);                  // animated (registration card)
+//   const bg = createSpaceBackground(someDiv, { still: true }); // FROZEN: no mouse parallax, no drift, no twinkle
 //   bg.dispose();
 // -----------------------------------------------------------------------------
 
@@ -62,11 +63,14 @@ const STAR_FRAG = /* glsl */ `
 `;
 
 export function createSpaceBackground(container, options = {}) {
-  const { starCountFar = 1600, starCountNear = 350, parallaxStrength = 0.4 } = options;
+  // still: true  -> the background never moves (no mouse parallax, no star rotation, no twinkle, no nebula drift).
+  //                 It is drawn once and again only when the window is resized.
+  const { starCountFar = 1600, starCountNear = 350, parallaxStrength = 0.4, still = false } = options;
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
   camera.position.set(0, 0, 6);
+  camera.lookAt(0, 0, -4);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   const pixelRatio = Math.min(window.devicePixelRatio, 2);
@@ -128,7 +132,7 @@ export function createSpaceBackground(container, options = {}) {
   const onPointerMove = (e) => {
     targetPointer.set((e.clientX / window.innerWidth) * 2 - 1, -((e.clientY / window.innerHeight) * 2 - 1));
   };
-  window.addEventListener('pointermove', onPointerMove);
+  if (!still) window.addEventListener('pointermove', onPointerMove);
 
   function fit() {
     const w = container.clientWidth || window.innerWidth;
@@ -136,25 +140,28 @@ export function createSpaceBackground(container, options = {}) {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    if (still) renderer.render(scene, camera);   // frozen: redraw only when the size changes
   }
   const resizeObserver = new ResizeObserver(fit);
   resizeObserver.observe(container);
   fit();
 
-  const clock = new THREE.Clock();
-  renderer.setAnimationLoop(() => {
-    const dt = clock.getDelta();
-    const time = clock.elapsedTime;
-    nebulaMat.uniforms.uTime.value = time;
-    farStars.material.uniforms.uTime.value = time;
-    nearStars.material.uniforms.uTime.value = time;
-    pointer.lerp(targetPointer, 1 - Math.pow(0.001, dt));
-    camera.position.set(pointer.x * parallaxStrength, pointer.y * parallaxStrength * 0.6, 6);
-    camera.lookAt(0, 0, -4);
-    farStars.rotation.y = time * 0.004;
-    nearStars.rotation.y = time * 0.009;
-    renderer.render(scene, camera);
-  });
+  if (!still) {
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      const dt = clock.getDelta();
+      const time = clock.elapsedTime;
+      nebulaMat.uniforms.uTime.value = time;
+      farStars.material.uniforms.uTime.value = time;
+      nearStars.material.uniforms.uTime.value = time;
+      pointer.lerp(targetPointer, 1 - Math.pow(0.001, dt));
+      camera.position.set(pointer.x * parallaxStrength, pointer.y * parallaxStrength * 0.6, 6);
+      camera.lookAt(0, 0, -4);
+      farStars.rotation.y = time * 0.004;
+      nearStars.rotation.y = time * 0.009;
+      renderer.render(scene, camera);
+    });
+  }
 
   return {
     dispose() {
