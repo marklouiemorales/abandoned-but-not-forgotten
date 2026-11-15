@@ -9,8 +9,7 @@ Mars
 
 # LINK TO PROJECT DEMO:
 
-https://drive.google.com/file/d/1L6L5HAP1KOZGcWOU5gGveU3kSIkJgHkc/view?usp=drive lin
-k
+https://drive.google.com/file/d/1L6L5HAP1KOZGcWOU5gGveU3kSIkJgHkc/view?usp=drive link
 
 # PROJECT OVERVIEW:
 
