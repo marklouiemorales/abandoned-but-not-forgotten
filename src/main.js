@@ -21,10 +21,10 @@ import { LRV } from '../entities/moon/lrv.js';
 import { INGENUITY } from '../entities/mars/ingenuity.js';
 
 // The three below are imported as whole modules, then pick()ed, so it works whatever
-// you named their export (SURVEYOR3, INSIGHT, SOJOURNER ... or a default export).
+// you named their export (SURVEYOR3, INSIGHT, NEAR_SHOEMAKER ... or a default export).
 import * as surveyor3Mod from '../entities/moon/surveyor3.js';
 import * as insightMod from '../entities/mars/insight.js';
-import * as sojournerMod from '../entities/mars/nearShoemaker.js';
+import * as nearShoemakerMod from '../entities/mars/nearShoemaker.js';
 import { MOON_LOCATION, MOON_SIGNALS } from '../entities/moon/moonSignals.js';
 import { MARS_LOCATION, MARS_SIGNALS } from '../entities/mars/marsSignals.js';
 
@@ -34,9 +34,9 @@ const pick = (mod) =>
 
 const SURVEYOR3 = pick(surveyor3Mod);
 const INSIGHT = pick(insightMod);
-const SOJOURNER = pick(sojournerMod);
+const NEAR_SHOEMAKER = pick(nearShoemakerMod);
 
-[['surveyor3', SURVEYOR3], ['insight', INSIGHT], ['sojourner', SOJOURNER]].forEach(([id, entity]) => {
+[['surveyor3', SURVEYOR3], ['insight', INSIGHT], ['nearShoemaker', NEAR_SHOEMAKER]].forEach(([id, entity]) => {
   if (!entity) {
     console.warn(`Equipment "${id}": no entity found in its file (needs a default export or an object with a glb field).`);
   }
@@ -46,19 +46,22 @@ const planetContainer = document.getElementById('moon-container');
 const query = new URLSearchParams(window.location.search);
 
 // DEV SHORTCUTS
-//   /?view=eagle      -> jump straight to the Eagle equipment page
-//   /?view=lrv        -> jump straight to the Moon Buggy equipment page
-//   /?view=surveyor3  -> jump straight to the Surveyor 3 equipment page
-//   /?view=ingenuity  -> jump straight to the Ingenuity equipment page
-//   /?view=insight    -> jump straight to the InSight equipment page
-//   /?view=sojourner  -> jump straight to the Sojourner equipment page
-//   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment, ending)
+//   /?view=eagle         -> jump straight to the Eagle equipment page
+//   /?view=lrv           -> jump straight to the Moon Buggy equipment page
+//   /?view=surveyor3     -> jump straight to the Surveyor 3 equipment page
+//   /?view=ingenuity     -> jump straight to the Ingenuity equipment page
+//   /?view=insight       -> jump straight to the InSight equipment page
+//   /?view=nearShoemaker -> jump straight to the NEAR Shoemaker equipment page
+//   /?phase=moon         -> jump to a phase (registration, briefing, moon, mars, equipment, ending)
 const view = query.get('view');
 const VIEW_ENTITIES = {
   eagle: EAGLE,
   surveyor3: SURVEYOR3,
   lrv: LRV,
-  sojourner: SOJOURNER,
+  sojourner: NEAR_SHOEMAKER,
+  nearShoemaker: NEAR_SHOEMAKER,
+  'near-shoemaker': NEAR_SHOEMAKER,
+  shoemaker: NEAR_SHOEMAKER,
   ingenuity: INGENUITY,
   insight: INSIGHT,
 };
@@ -70,7 +73,7 @@ const requestedPhase = VIEW_ENTITIES[view]
 // ---------------------------------------------------------------------------
 // Equipment pages. The key MUST match `equipment.id` in the signals data
 // (moonSignals.js / marsSignals.js):
-//   Moon: eagle, surveyor3, lrv        Mars: sojourner, ingenuity, insight
+//   Moon: eagle, surveyor3, lrv        Mars: nearShoemaker (or shoemaker/sojourner), ingenuity, insight
 // A signal whose id is missing falls back to the dev-shortcut entity (Eagle by default).
 // ---------------------------------------------------------------------------
 const ENTITIES = {
@@ -80,16 +83,19 @@ const ENTITIES = {
   lrv: LRV,
   lrv1: LRV, // old id, kept so nothing breaks
   // Mars
-  sojourner: SOJOURNER,
+  sojourner: NEAR_SHOEMAKER,
+  nearShoemaker: NEAR_SHOEMAKER,
+  'near-shoemaker': NEAR_SHOEMAKER,
+  shoemaker: NEAR_SHOEMAKER,
   ingenuity: INGENUITY,
   insight: INSIGHT,
-  pathfinder: SOJOURNER,
+  pathfinder: NEAR_SHOEMAKER,
 };
 
 // What the < / > pager walks through on each planet (same order as the signals).
 const PLANET_EQUIPMENT = {
   moon: [EAGLE, SURVEYOR3, LRV].filter(Boolean),
-  mars: [SOJOURNER, INGENUITY, INSIGHT].filter(Boolean),
+  mars: [NEAR_SHOEMAKER, INGENUITY, INSIGHT].filter(Boolean),
 };
 
 const TOTAL_MISSIONS = 6;      // 3 Moon + 3 Mars
@@ -496,5 +502,5 @@ checkAudio(
   SURVEYOR3,
   INSIGHT,
   INGENUITY,
-  SOJOURNER
+  NEAR_SHOEMAKER
 );
