@@ -15,21 +15,23 @@ const DEFAULT_OBJ_URL = '/assets/shuttle-fire.obj'; // public/assets/shuttle-fir
 
 const DEFAULT_TAGLINE = '“Every Mission Has a Story. Every Legacy Deserves To Be Remembered”';
 
-// Edit the credits here (or pass `credits` in the options).
+// Edit the credits here (or pass `credits` in the options). {name} = the explorer's name.
 const DEFAULT_CREDITS = [
   { title: 'Mission Complete', lines: ['Thank you for playing, {name}'] },
-  { title: 'Created By', lines: ['Your Name'] },
-  { title: 'Design & Development', lines: ['Your Name'] },
+  { title: 'Created By', lines: ['The Trail Blazers'] },
+  { title: 'Design & Development', lines: ['The Trail Blazers'] },
   { title: '3D Models', lines: ['Apollo 11 Lunar Module Eagle', 'Surveyor 3', 'Apollo 15 Lunar Roving Vehicle', 'Sojourner', 'Ingenuity', 'InSight'] },
   { title: 'Mission Archive', lines: ['NASA'] },
   { title: 'Built With', lines: ['Three.js'] },
 ];
 
-// timings (seconds, real time) of the credits layer
-const CREDITS_DELAY = 2;
-const CREDITS_DURATION = 26;
-const TAGLINE_DELAY = CREDITS_DELAY + CREDITS_DURATION + 0.5;
-const BUTTON_DELAY = TAGLINE_DELAY + 3;
+// timings (seconds, real time)
+const CREDITS_DELAY = 4;      // credits start rolling as the shuttle begins to leave
+const CREDITS_DURATION = 28;  // time for the whole roll to pass
+const TAGLINE_DELAY = CREDITS_DELAY + CREDITS_DURATION + 0.5; // tagline starts after the credits
+const TAGLINE_FADE = 2.4;     // length of that fade
+const TAGLINE_HOLD = 7;       // how long it stays on screen
+const FADE_OUT = 1.6;         // fade to black, then back to the start
 /* -------------------- */
 
 const CSS = `
@@ -42,27 +44,28 @@ const CSS = `
 .end-credits { position: absolute; inset: 0; z-index: 6; overflow: hidden; pointer-events: none;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%);
           mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%); }
-.end-credits-roll { position: absolute; left: 0; right: 0; top: 0; text-align: center; color: #dfe6f2;
-  font-family: system-ui, sans-serif; padding: 0 24px; box-sizing: border-box; transform: translateY(100vh);
+.end-root { font-family: inherit; }
+.end-credits-roll { position: absolute; left: 0; right: 0; top: 0; text-align: center; color: #fff;
+  padding: 0 24px 12vh; box-sizing: border-box; transform: translateY(100vh);
+  text-shadow: 0 0 14px rgba(255, 255, 255, .25), 0 2px 18px rgba(0, 0, 0, .85);
   animation: end-roll ${CREDITS_DURATION}s linear ${CREDITS_DELAY}s forwards; }
-.end-credits-roll section { margin: 0 0 56px; }
-.end-credits-roll h3 { margin: 0 0 12px; font-size: 12px; font-weight: 600; letter-spacing: .32em;
-  text-transform: uppercase; color: #7f93b5; }
-.end-credits-roll p { margin: 0 0 6px; font-size: clamp(16px, 2.4vw, 22px); font-weight: 300; letter-spacing: .04em; }
+.end-credits-roll section { margin: 0 auto clamp(56px, 10vh, 110px); max-width: 760px; }
+/* role titles: small, wide-spaced sans, like the "Start journey" button / footer */
+.end-credits-roll h3 { margin: 0 0 clamp(12px, 2vh, 20px); font-family: inherit; font-size: clamp(10px, 1vw, 12px);
+  font-weight: 500; letter-spacing: .4em; text-indent: .4em; text-transform: uppercase; color: #9aa7bf; }
+/* names: thin, wide-spaced capitals like the "REMEMBER ME" title.
+   Set --end-display-font to the title's font-family (see styles.css). */
+.end-credits-roll p { margin: 0 0 .6em; font-family: var(--end-display-font, inherit); font-size: clamp(15px, 1.7vw, 22px);
+  font-weight: 300; line-height: 1.6; letter-spacing: .28em; text-indent: .28em; text-transform: uppercase; }
 @keyframes end-roll { from { transform: translateY(100vh); } to { transform: translateY(-100%); } }
-.end-final { position: absolute; inset: 0; z-index: 7; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 36px; padding: 24px; text-align: center; pointer-events: none; }
-.end-tagline { margin: 0; max-width: 780px; color: #f2f5fb; font: 300 clamp(20px, 3.4vw, 36px)/1.45 Georgia, 'Times New Roman', serif;
-  letter-spacing: .02em; text-shadow: 0 0 24px rgba(120, 160, 255, .35); opacity: 0;
-  animation: end-in 2.4s ease ${TAGLINE_DELAY}s forwards; }
-.end-btn { pointer-events: none; opacity: 0; padding: 12px 28px; border-radius: 999px; cursor: pointer;
-  border: 1px solid rgba(160, 190, 255, .5); background: rgba(20, 30, 55, .55); color: #dfe6f2;
-  font: 500 13px/1 system-ui, sans-serif; letter-spacing: .18em; text-transform: uppercase;
-  animation: end-in 1.6s ease ${BUTTON_DELAY}s forwards, end-click 0s linear ${BUTTON_DELAY}s forwards; }
-.end-btn:hover { background: rgba(60, 90, 160, .55); }
+.end-final { position: absolute; inset: 0; z-index: 7; display: flex; align-items: center;
+  justify-content: center; padding: 24px; text-align: center; pointer-events: none; }
+.end-tagline { margin: 0; max-width: 640px; color: #fff; font: 400 clamp(12px, 1.4vw, 17px)/1.9 'Times New Roman', Times, serif;
+  letter-spacing: .24em; text-transform: uppercase; text-shadow: 0 0 18px rgba(255, 255, 255, .3); opacity: 0;
+  animation: end-in ${TAGLINE_FADE}s ease ${TAGLINE_DELAY}s forwards; }
+.end-out { position: absolute; inset: 0; z-index: 8; background: #000; opacity: 0; pointer-events: none;
+  transition: opacity ${FADE_OUT}s ease; }
 @keyframes end-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@keyframes end-click { to { pointer-events: auto; } }
-@media (prefers-reduced-motion: reduce) { .end-credits-roll { animation-duration: ${CREDITS_DURATION * 1.5}s; } }
 `;
 
 function ensureStyles() {
@@ -76,14 +79,14 @@ function ensureStyles() {
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /**
- * Ending: shuttle launch -> departure loop with the credits rolling over it,
- * then the closing tagline.
+ * Ending: shuttle launch -> departure with the credits rolling as it leaves,
+ * then the closing tagline, then back to the start.
  *
  * createEndingScene(document.body, {
- *   explorer,            // { name } used for {name} in the credits
+ *   explorer,            // { name } fills {name} in the credits
  *   objUrl,              // default '/assets/shuttle-fire.obj'
  *   credits, tagline,    // optional overrides
- *   onRestart,           // called when the "Back to start" button is pressed
+ *   onRestart,           // called automatically after the tagline, to go back to the start
  * })
  * returns { root, dispose }
  */
@@ -96,7 +99,6 @@ export function createEndingScene(parent = document.body, options = {}) {
     tagline = DEFAULT_TAGLINE,
     onRestart,
   } = options;
-  const name = explorer?.name || 'Commander';
 
   // ---- DOM ----
   const root = document.createElement('div');
@@ -104,23 +106,27 @@ export function createEndingScene(parent = document.body, options = {}) {
   root.innerHTML = `
     <div class="end-loading">Loading shuttle…</div>
     <div class="end-credits"><div class="end-credits-roll">
-      ${credits.map((c) => `<section><h3>${esc(c.title)}</h3>${c.lines.map((l) => `<p>${esc(l.replace('{name}', name))}</p>`).join('')}</section>`).join('')}
+      ${credits.map((c) => `<section><h3>${esc(c.title)}</h3>${c.lines.map((l) => `<p>${esc(l.replace('{name}', explorer?.name || 'Commander'))}</p>`).join('')}</section>`).join('')}
     </div></div>
-    <div class="end-final">
-      <p class="end-tagline">${esc(tagline)}</p>
-      <button class="end-btn" type="button">Back to start</button>
-    </div>
-    <div class="end-fade"></div>`;
+    <div class="end-final"><p class="end-tagline">${esc(tagline)}</p></div>
+    <div class="end-fade"></div>
+    <div class="end-out"></div>`;
   parent.appendChild(root);
   const loadingEl = root.querySelector('.end-loading');
   const fadeEl = root.querySelector('.end-fade');
-  root.querySelector('.end-btn').addEventListener('click', () => onRestart?.());
+  const outEl = root.querySelector('.end-out');
 
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const amp = calm ? 0.25 : 1;
   let disposed = false;
   const timeouts = new Set();
   const later = (fn, ms) => { const id = setTimeout(() => { timeouts.delete(id); fn(); }, ms); timeouts.add(id); };
+
+  // tagline shows, holds, fades to black, then back to the start
+  later(() => {
+    outEl.style.opacity = 1;
+    later(() => onRestart?.(), FADE_OUT * 1000 + 200);
+  }, (TAGLINE_DELAY + TAGLINE_FADE + TAGLINE_HOLD) * 1000);
 
   // ---- renderer ----
   const renderer = new THREE.WebGLRenderer({ antialias: true });

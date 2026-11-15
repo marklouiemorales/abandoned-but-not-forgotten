@@ -10,6 +10,7 @@ export const GAME_PHASES = Object.freeze([
   'mars',
   'return',
   'certificate',
+  'ending',
 ]);
 
 export function createGameState(phases) {
