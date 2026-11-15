@@ -76,8 +76,8 @@ export const INSIGHT = {
 
   /* ---------- 3D model ---------- */
   glb: {
-    // File on disk: public/assets/models/mars/insight-lander.glb  (rename to match your file)
-    url: '/assets/models/mars/insight.glb',
+    // File on disk: public/assets/models/mars/InSight Cruise Lander (arm deployed).glb  (rename to match your file)
+    url: '/assets/models/mars/InSight Cruise Lander (arm deployed).glb',
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model
     // Starting camera for THIS equipment (Reset returns here). Tweak ry until the first view looks right.

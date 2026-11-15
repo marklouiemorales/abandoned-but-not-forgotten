@@ -71,7 +71,7 @@ export const LRV = {
   /* ---------- 3D model ---------- */
   glb: {
     // File on disk: public/assets/models/moon/apollo-15-lunar-roving-vehicle.glb  (rename to match your file)
-    url: '/assets/models/moon/rover.glb',
+    url: '/assets/models/moon/LRV02_che02_nurColor.glb',
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model
     // Starting camera for THIS equipment (Reset returns here). A rover is long and low, so tweak ry
