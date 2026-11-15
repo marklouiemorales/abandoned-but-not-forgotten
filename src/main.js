@@ -14,6 +14,7 @@ import { createSignalMarkers } from './interaction/planetSignalMarkers.js';
 import { createGameState, GAME_PHASES } from './state/gameState.js';
 import { MARS_ENDING_PART_1, MARS_ENDING_PART_2, MARS_ENDING_PART_3 } from './scenes/marsEndingScript.js';
 import { checkAudio } from './interaction/audioCheck.js';
+import { bgm } from './audio/bgm.js';
 
 // entities/ sits next to src/
 import { EAGLE } from '../entities/moon/eagle.js';
@@ -106,6 +107,7 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
     enter({ state, goTo }) {
       const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
 
+      bgm.play(MOON_MARS_MUSIC_URL, { volume: MUSIC_VOLUME });
       const planet = createScene(planetContainer, {
         modelUrl,
         fill: 1.5,
@@ -242,6 +244,7 @@ function ensureMarsTransitionStyles() {
    Moon -> Mars dialogue), mission control dialogue + two certificates,
    then black, then the shuttle + credits */
 function playMarsToEnding({ explorer, hud, controls, goTo, planet }) {
+  bgm.stop(2500);   // credits have their own music
   ensureMarsTransitionStyles();
   controls.hold('transition');
   hud.el.classList.add('mt-fade');
@@ -383,45 +386,16 @@ function runMarsDialogue({ explorer, goTo }) {
   });
 }
 
-/* ---------- Start-scene background music ----------
-   Starts on "Start journey" (browsers only allow audio started by a click),
-   plays through the name screen and mission briefing, fades out when the
-   mission is accepted, and is gone before the Moon scene loads. */
+/* ---------- Background music (player lives in src/audio/bgm.js) ---------- */
 const START_MUSIC_URL = '/assets/audio/Start_Scene.mp3';
-const START_MUSIC_VOLUME = 0.35;
+const MOON_MARS_MUSIC_URL = '/assets/audio/Moon_Mars_Scene.mp3';
+const MUSIC_VOLUME = 0.35;
 const START_MUSIC_FADE_MS = 2200;   // matches the ship's departure fade
-
-let startMusic = null;
-
-function stopStartMusic(fadeMs = 0) {
-  const a = startMusic;
-  startMusic = null;
-  if (!a) return;
-  if (!fadeMs) { a.pause(); return; }
-  const from = a.volume;
-  const steps = Math.max(1, Math.round(fadeMs / 50));
-  let n = 0;
-  const id = setInterval(() => {
-    n++;
-    a.volume = Math.max(0, from * (1 - n / steps));
-    if (n >= steps) { clearInterval(id); a.pause(); }
-  }, fadeMs / steps);
-}
-
-function playStartMusic() {
-  stopStartMusic(0);
-  const a = new Audio(START_MUSIC_URL);
-  a.loop = true;
-  a.volume = START_MUSIC_VOLUME;
-  a.addEventListener('error', () => console.warn('[music] could not load', START_MUSIC_URL));
-  startMusic = a;
-  a.play().catch((err) => console.warn('[music] playback blocked:', err));
-}
 
 const introPhase = {
   enter({ goTo }) {
-    const onLaunch = () => playStartMusic();                          // "Start journey" clicked
-    const onDepart = () => stopStartMusic(START_MUSIC_FADE_MS);       // mission accepted, ship leaves
+    const onLaunch = () => bgm.play(START_MUSIC_URL, { volume: MUSIC_VOLUME }); // "Start journey" clicked
+    const onDepart = () => bgm.stop(START_MUSIC_FADE_MS);                       // mission accepted, ship leaves
     document.addEventListener('remember-me:launch', onLaunch);
     document.addEventListener('remember-me:depart', onDepart);
 
@@ -434,8 +408,8 @@ const introPhase = {
           onConfirm: (explorer) => done(explorer),
         }),
       onEnd: (explorer) => {
-        // screen is fully black here: build the Moon, then fade the black away
-        stopStartMusic(0); goTo('moon', { explorer });
+        bgm.stop(0);                  // screen is fully black: make sure the start track is gone
+        goTo('moon', { explorer });
         revealFromBlack(1400, 400);
       },
     });
@@ -445,7 +419,6 @@ const introPhase = {
       dispose() {
         document.removeEventListener('remember-me:launch', onLaunch);
         document.removeEventListener('remember-me:depart', onDepart);
-        stopStartMusic(0);            // safety: never let it leak into the Moon scene
         briefing.dispose();
       },
     };
@@ -496,7 +469,7 @@ const phases = {
       });
     },
     exit({ scene }) {
-      scene.dispose();
+      document.dispatchEvent(new CustomEvent('bgm:unduck')); scene.dispose();
     },
   },
   moon: createPlanetPhase({

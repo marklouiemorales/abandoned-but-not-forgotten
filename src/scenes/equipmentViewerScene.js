@@ -1148,7 +1148,7 @@ export function createEquipmentViewer(container = document.body, options = {}) {
     if (lines[i].sfx) play(lines[i].sfx, voice); else voice();
   }
   function openStory() {
-    storyOpen = true;
+    storyOpen = true; document.dispatchEvent(new CustomEvent('bgm:duck'));
     root.classList.add('story-mode');      // every card fades out, only the 3D object stays
     setWire(false);                        // object is shown solid while it talks
     ui.storywrap.classList.add('open');
@@ -1158,7 +1158,7 @@ export function createEquipmentViewer(container = document.body, options = {}) {
   function closeStory() {
     stopAudio(); stopType();
     if (!storyOpen) return;
-    storyOpen = false;
+    storyOpen = false; document.dispatchEvent(new CustomEvent('bgm:unduck'));
     root.classList.remove('story-mode');
     ui.storywrap.classList.remove('open');
     setWire(analyzing || analyzed);        // bring the analyzed look back if it was on
