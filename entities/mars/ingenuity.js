@@ -81,7 +81,7 @@ export const INGENUITY = {
   /* ---------- 3D model ---------- */
   glb: {
     // File on disk: public/assets/models/mars/ingenuity-mars-helicopter.glb  (rename to match your file)
-    url: '/assets/models/mars/ingenuity.glb',
+    url: '/assets/models/mars/25043_Ingenuity_v3.glb',
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model
     // Starting camera for THIS equipment (Reset returns here). Tweak ry until the first view looks right.

@@ -8,8 +8,7 @@
 //
 // Drop your model at   public/assets/models/moon/eagle.glb   (URL below has no "public").
 // Until the file exists, the viewer shows a "3D model" placeholder box.
-// Voice lines: put mp3 files in public/assets/audio (optional, text works without).
-// The text typing speed is synced to the voice by src/utils/storyPlayer.js.
+// Voice lines: put mp3 files at the `audio` paths (optional, text works without).
 // -----------------------------------------------------------------------------
 
 import * as THREE from 'three';
@@ -69,7 +68,7 @@ export const EAGLE = {
   glb: {
     // Vite serves the "public" folder from the site root, so DO NOT write "public/" here.
     // File on disk: public/assets/models/moon/eagle.glb
-    url: '/assets/models/moon/apollo-lunar-module-eagle.glb',  // URL to the GLB file (no "public" prefix)
+    url: '/assets/models/moon/Apollo Lunar Module.glb',  // URL to the GLB file (no "public" prefix)
     // Viewer (the "equipment page"): tweak if your model faces the wrong way
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model
@@ -93,41 +92,33 @@ export const EAGLE = {
   },
 
   /* ---------- Monologue (Eagle speaks in the first person) ----------
-     {name} is replaced by the explorer's name.
-     `sfx` plays first, then `audio` (all optional mp3, files live in public/assets/audio).
-     `durationMs` = length of the voice clip, a fallback. The player uses the real clip
-                    length from the browser when it can, so the text ends with the voice.
-                    Add it for each line once you know the clip length (lines 2, 3, 5 are not measured yet).
-     `pauseAfterMs` = optional pause before the next line (default 500). */
+     {name} is replaced by the explorer's name. `sfx` plays first, then `audio` (all optional mp3). */
   monologue: [
     {
       speaker: 'Eagle',
       text: 'Bzzt…. The Eagle has landed!!!',
-      sfx: '/assets/audio/device-static.mp3',   // optional, skipped if the file is missing
-      audio: '/assets/audio/Eagle-1.mp3',
-      durationMs: 2847,                         // measured from Eagle-1.mp3
-      pauseAfterMs: 700,
+      sfx: '/assets/audio/moon/device-static.mp3',   // the device sound effect
+      audio: '/assets/audio/moon/eagle-1.mp3',
     },
     {
       speaker: 'Eagle',
       text: 'Hi, Space Commander {name}! Welcome to the Sea of Tranquility! I am the Descent Stage of the Apollo 11 Lunar Module, "Eagle"! Grumman Aircraft Engineering Corporation built me for NASA.',
-      audio: '/assets/audio/Eagle-2.mp3',
+      audio: '/assets/audio/moon/eagle-2.mp3',
     },
     {
       speaker: 'Eagle',
       text: 'My journey began on July 16, 1969, riding into space aboard a giant Saturn V rocket. Four days later, on July 20, 1969, Commander Neil Armstrong and Lunar Module Pilot Edwin "Buzz" Aldrin rode atop me as we descended through the pitch-black sky to make humanity\'s very first touchdown on the Moon!',
-      audio: '/assets/audio/Eagle-3.mp3',
+      audio: '/assets/audio/moon/eagle-3.mp3',
     },
     {
       speaker: 'Eagle',
       text: 'While my top half, the Ascent Stage, blasted back into lunar orbit on July 21, 1969 to start Neil and Buzz\'s journey safely home to Earth, I stayed behind. I served as the launchpad for their liftoff, and now I stand right here at Statio Tranquillitatis as a permanent monument to one giant leap for mankind.',
-      audio: '/assets/audio/Eagle-4.mp3',
-      durationMs: 21838,                        // measured from Eagle-4.mp3
+      audio: '/assets/audio/moon/eagle-4.mp3',
     },
     {
       speaker: 'Eagle',
       text: 'Even though I rest silently in the lunar dust today, my metallic gold insulation still shines in the sunlight, marking the spot where humans first walked on another world. Thank you for scanning and finding me, Space Commander {name}! I hope everyone on your planet remembers me! Keep exploring!!!',
-      audio: '/assets/audio/Eagle-5.mp3',
+      audio: '/assets/audio/moon/eagle-5.mp3',
     },
   ],
 
