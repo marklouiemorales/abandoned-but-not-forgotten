@@ -121,7 +121,6 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
         signals,
         totalMissions: TOTAL_MISSIONS,
         baseFound,
-        onHome: () => goTo('registration'),
         onJournal: () => console.log('Open journal'),
       });
 
