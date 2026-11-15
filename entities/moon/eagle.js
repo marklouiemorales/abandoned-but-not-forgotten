@@ -98,27 +98,27 @@ export const EAGLE = {
       speaker: 'Eagle',
       text: 'Bzzt…. The Eagle has landed!!!',
       sfx: '/assets/audio/moon/device-static.mp3',   // the device sound effect
-      audio: '/assets/audio/moon/eagle-1.mp3',
+      audio: '/assets/audio/Eagle-1.mp3',
     },
     {
       speaker: 'Eagle',
       text: 'Hi, Space Commander {name}! Welcome to the Sea of Tranquility! I am the Descent Stage of the Apollo 11 Lunar Module, "Eagle"! Grumman Aircraft Engineering Corporation built me for NASA.',
-      audio: '/assets/audio/moon/eagle-2.mp3',
+      audio: '/assets/audio/Eagle-2.mp3',
     },
     {
       speaker: 'Eagle',
       text: 'My journey began on July 16, 1969, riding into space aboard a giant Saturn V rocket. Four days later, on July 20, 1969, Commander Neil Armstrong and Lunar Module Pilot Edwin "Buzz" Aldrin rode atop me as we descended through the pitch-black sky to make humanity\'s very first touchdown on the Moon!',
-      audio: '/assets/audio/moon/eagle-3.mp3',
+      audio: '/assets/audio/Eagle-3.mp3',
     },
     {
       speaker: 'Eagle',
       text: 'While my top half, the Ascent Stage, blasted back into lunar orbit on July 21, 1969 to start Neil and Buzz\'s journey safely home to Earth, I stayed behind. I served as the launchpad for their liftoff, and now I stand right here at Statio Tranquillitatis as a permanent monument to one giant leap for mankind.',
-      audio: '/assets/audio/moon/eagle-4.mp3',
+      audio: '/assets/audio/Eagle-4.mp3',
     },
     {
       speaker: 'Eagle',
       text: 'Even though I rest silently in the lunar dust today, my metallic gold insulation still shines in the sunlight, marking the spot where humans first walked on another world. Thank you for scanning and finding me, Space Commander {name}! I hope everyone on your planet remembers me! Keep exploring!!!',
-      audio: '/assets/audio/moon/eagle-5.mp3',
+      audio: '/assets/audio/Eagle-5.mp3',
     },
   ],
 
