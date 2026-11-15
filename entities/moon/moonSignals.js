@@ -32,7 +32,7 @@ export const MOON_LOCATION = {
 export const MOON_SIGNALS = [
   {
     id: 'moon-signal-1', index: 1, lat: 6, lon: -15,
-    label: 'Unknown signal', hint: 'Select to investigate',
+    label: 'Unknown signal', hint: 'Click to Investigate',
     equipment: {
       id: 'eagle',
       name: 'Apollo 11 Lunar Module \u201CEagle\u201D',
@@ -46,7 +46,7 @@ export const MOON_SIGNALS = [
   },
   {
     id: 'moon-signal-2', index: 2, lat: -24, lon: 105,
-    label: 'Unknown signal', hint: 'Select to investigate',
+    label: 'Unknown signal', hint: 'Click to Investigate',
     equipment: {
       id: 'surveyor3',
       name: 'Surveyor 3 Lunar Lander',
@@ -60,7 +60,7 @@ export const MOON_SIGNALS = [
   },
   {
     id: 'moon-signal-3', index: 3, lat: 22, lon: -135,
-    label: 'Unknown signal', hint: 'Select to investigate',
+    label: 'Unknown signal', hint: 'Click to Investigate',
     equipment: {
       id: 'lrv',
       name: 'Lunar Roving Vehicle 1 (LRV-1)',

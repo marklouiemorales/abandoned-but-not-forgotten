@@ -102,101 +102,51 @@ body, html { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%;
 /* ---------- 4. Planet HUD layout ---------- */
 .planet-hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; font-family: var(--font-ui); transition: opacity .35s ease; }
 .planet-hud.is-dim { opacity: .2; }
-.planet-hud button, .planet-hud .hud-panel { pointer-events: auto; }
+.planet-hud button { pointer-events: auto; }
 
-/* soft vignette + faint rings so the planet stays the hero */
-.planet-hud::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background: radial-gradient(ellipse at 50% 50%, transparent 46%, rgba(0, 4, 16, .62) 100%); }
-.planet-hud::after { content: ''; position: fixed; left: 50%; top: 50%; width: min(78vh, 52vw); aspect-ratio: 1; z-index: -1;
-  transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none;
-  border: 1px solid rgba(91, 155, 255, .16);
-  box-shadow: 0 0 0 26px rgba(91, 155, 255, .035), inset 0 0 60px rgba(91, 155, 255, .05);
-  animation: ringPulse 5s ease-in-out infinite; }
-@keyframes ringPulse { 50% { border-color: rgba(91, 155, 255, .3); } }
+/* shared card: dark glass, white top edge, cut bottom-right corner */
+.hud-card { position: absolute; box-sizing: border-box; color: #fff;
+  background: rgba(6, 10, 24, .86); border-top: 2px solid #fff; backdrop-filter: blur(6px);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%); }
 
-/* rail across the top: fills the empty strip with a scale line */
-.hud-rail { position: absolute; top: 12px; left: 26px; right: 26px; height: 1px; pointer-events: none;
-  background: linear-gradient(90deg, rgba(91, 155, 255, .8), rgba(91, 155, 255, .35) 45%, rgba(91, 155, 255, .8)); }
-.hud-rail::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 6px;
-  background: repeating-linear-gradient(90deg, rgba(91, 155, 255, .5) 0 1px, transparent 1px 16px); }
-
-/* TOP LEFT: title, plain text (no card). pointer-events none so dragging passes through. */
-.hud-title { position: absolute; top: 34px; left: 30px; width: min(520px, 40vw); pointer-events: none;
-  text-shadow: 0 2px 16px rgba(0, 0, 0, .9), 0 0 4px rgba(0, 0, 0, .8); }
-.hud-kicker { text-shadow: inherit; }
-.hud-name { margin: 10px 0 6px; font-size: clamp(38px, 5.2vw, 68px); line-height: 1; letter-spacing: .07em; text-transform: uppercase; font-weight: 700;
-  color: #fff; text-shadow: 0 0 26px rgba(91, 155, 255, .55), 0 2px 16px rgba(0, 0, 0, .9); }
-.hud-sub { display: flex; align-items: center; gap: 12px; font-size: 15px; letter-spacing: .16em; text-transform: uppercase; color: var(--blue); }
-.hud-sub i { width: 34px; height: 2px; background: var(--blue); box-shadow: 0 0 8px var(--blue); }
-.hud-desc { margin: 14px 0 16px; max-width: 440px; font-family: var(--font-body); font-weight: 600; font-size: 19px; line-height: 1.4; color: rgba(235, 242, 255, .95); }
-.hud-chips { display: flex; flex-wrap: wrap; gap: 8px 22px; }
-.hud-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: rgba(225, 236, 255, .8); }
-.hud-chip--live { color: var(--ok); }
-.hud-chip i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; animation: livePulse 1.6s ease-in-out infinite; }
-@keyframes livePulse { 50% { opacity: .35; } }
-
-/* TOP CENTER: hint */
-.hud-hint { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center;
-  padding: 8px 14px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; color: rgba(225, 236, 255, .85);
-  border: 1px solid rgba(91, 155, 255, .45); background: var(--slate); backdrop-filter: blur(6px); transition: opacity .5s; }
-.hud-hint em { width: 1px; height: 12px; background: rgba(255, 255, 255, .3); }
-.hud-hint.is-hidden { opacity: 0; }
-
-/* TOP RIGHT: buttons + radar */
-.hud-top-right { position: absolute; top: 30px; right: 26px; display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
-.hud-buttons { display: flex; gap: 8px; }
-.hud-btn { display: inline-flex; align-items: center; gap: 10px; padding: 5px 14px 5px 6px; cursor: pointer; font-family: var(--font-ui);
-  font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: #dbe8ff; background: var(--slate); border: 1px solid var(--slate-line);
-  border-radius: 999px; backdrop-filter: blur(6px); transition: box-shadow .2s, transform .2s; }
-.hud-btn:hover { box-shadow: 0 0 16px rgba(91, 155, 255, .6); transform: translateY(-1px); }
-.hud-btn__ico { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--blue); color: var(--blue); }
-.hud-radar { display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
-.hud-radar__dial { position: relative; width: 62px; height: 62px; border-radius: 50%; border: 1px solid rgba(91, 155, 255, .6); overflow: hidden;
-  background: radial-gradient(circle, transparent 28%, rgba(91, 155, 255, .25) 29% 30%, transparent 31% 58%, rgba(91, 155, 255, .25) 59% 60%, transparent 61%); }
-.hud-radar__dial::before, .hud-radar__dial::after { content: ''; position: absolute; background: rgba(91, 155, 255, .25); }
-.hud-radar__dial::before { left: 50%; top: 0; bottom: 0; width: 1px; }
-.hud-radar__dial::after { top: 50%; left: 0; right: 0; height: 1px; }
-.hud-radar__sweep { position: absolute; inset: 0; border-radius: 50%; animation: radarSweep 3.2s linear infinite;
-  background: conic-gradient(from 0deg, rgba(46, 229, 157, .55), transparent 70deg, transparent); }
-.hud-radar__dial b { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-.hud-radar__dial b:nth-of-type(1) { left: 62%; top: 24%; }
-.hud-radar__dial b:nth-of-type(2) { left: 28%; top: 66%; }
-.hud-radar__dial b:nth-of-type(3) { left: 70%; top: 70%; }
-@keyframes radarSweep { to { transform: rotate(360deg); } }
-.hud-radar__lbl span { display: block; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--blue); }
-.hud-radar__lbl em { display: block; margin-top: 4px; font-style: normal; font-size: 13px; font-weight: 600; }
-
-/* BOTTOM LEFT: readout strip */
-.hud-strip { position: absolute; left: 26px; bottom: 26px; display: grid; grid-template-columns: repeat(4, auto); gap: 8px 26px; padding: 14px 20px; }
-.hud-strip small { display: block; font-size: 8px; letter-spacing: .2em; text-transform: uppercase; color: var(--blue); }
-.hud-strip b { display: block; margin-top: 4px; font-size: 14px; font-weight: 600; white-space: nowrap; }
-.hud-ok { color: var(--ok); }
-.hud-strip__cap { grid-column: 1 / -1; padding-top: 8px; border-top: 1px solid rgba(91, 155, 255, .3);
-  font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: rgba(210, 225, 255, .55); }
-
-/* BOTTOM RIGHT: explorer + objective. Outline only: no fill, so the text carries it. */
-.hud-outline { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
-  border-color: rgba(91, 155, 255, .6); box-shadow: inset 0 0 40px rgba(91, 155, 255, .05);
-  text-shadow: 0 1px 10px rgba(0, 0, 0, .95), 0 0 3px rgba(0, 0, 0, .9); }
-.hud-outline .hud-data__head { color: #7fb2ff; border-bottom-color: rgba(91, 155, 255, .45); }
-.hud-outline .hud-explorer b { font-size: 16px; }
-.hud-outline .hud-explorer small, .hud-outline .hud-list li { color: rgba(235, 242, 255, .9); }
-.hud-outline .hud-list li { border-top-color: rgba(91, 155, 255, .3); }
-.hud-outline .hud-segments i { background: rgba(255, 255, 255, .28); }
-.hud-data { position: absolute; right: 26px; bottom: 26px; width: min(320px, 30vw); padding: 14px 18px 16px; }
-.hud-explorer { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 14px; }
-.hud-explorer b { font-size: 15px; letter-spacing: .06em; }
-.hud-explorer small { display: block; margin-top: 3px; font-size: 9px; letter-spacing: .12em; color: rgba(210, 225, 255, .6); }
-.hud-explorer__total { text-align: right; }
-.hud-segments { display: flex; gap: 6px; margin: 4px 0 10px; }
-.hud-segments i { flex: 1; height: 4px; background: rgba(255, 255, 255, .15); }
-.hud-segments i.is-found { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-.hud-objective { margin: 0 0 8px; font-family: var(--font-body); font-weight: 600; font-size: 15px; line-height: 1.3; color: rgba(235, 242, 255, .92); }
+/* TOP LEFT */
+.hud-title { position: absolute; top: 20px; left: 20px; width: min(420px, 42vw); pointer-events: none;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .9); }
+.hud-title .hud-kicker { font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--blue); }
+.hud-name { margin: 8px 0 12px; font-size: clamp(34px, 4.4vw, 56px); line-height: 1; letter-spacing: .08em;
+  text-transform: uppercase; font-weight: 600; color: #e6eeff; }
+.hud-objective { margin: 0 0 18px; font-family: var(--font-body); font-weight: 600; font-size: 15px; letter-spacing: .02em;
+  color: rgba(230, 238, 255, .92); }
+.hud-explorer-line { margin-bottom: 8px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(210, 225, 255, .75); }
 .hud-list { list-style: none; margin: 0; padding: 0; }
-.hud-list li { display: flex; gap: 10px; align-items: center; padding: 5px 0; font-size: 11px; letter-spacing: .04em; color: rgba(210, 225, 255, .75); border-top: 1px solid rgba(91, 155, 255, .15); }
-.hud-list li i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid currentColor; flex: none; }
+.hud-list li { display: flex; align-items: center; gap: 12px; padding: 4px 0; font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: rgba(225, 235, 255, .85); }
+.hud-list li i { width: 8px; height: 8px; flex: none; border-radius: 50%; border: 1px solid currentColor; }
 .hud-list li.is-found { color: #fff; }
 .hud-list li.is-found i { background: var(--ok); border-color: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+/* TOP RIGHT: round icon buttons */
+.hud-top-right { position: absolute; top: 18px; right: 18px; }
+.hud-buttons { display: flex; gap: 8px; }
+.hud-btn { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; cursor: pointer; color: #dbe8ff;
+  background: rgba(6, 10, 24, .7); border: 1px solid var(--slate-line); border-radius: 50%; backdrop-filter: blur(6px);
+  transition: box-shadow .2s, transform .2s; }
+.hud-btn:hover { box-shadow: 0 0 16px rgba(91, 155, 255, .6); transform: translateY(-1px); }
+.hud-btn svg { width: 16px; height: 16px; display: block; }
+
+/* BOTTOM LEFT: readout */
+.hud-strip { left: 20px; bottom: 20px; display: grid; grid-template-columns: repeat(3, auto); gap: 0 34px; padding: 16px 24px 16px 20px; }
+.hud-strip small { display: block; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: rgba(210, 225, 255, .6); }
+.hud-strip b { display: block; margin-top: 8px; font-size: 15px; font-weight: 600; letter-spacing: .12em; white-space: nowrap; }
+.hud-ok { color: var(--ok); }
+
+/* BOTTOM RIGHT: explorer */
+.hud-explorer-card { right: 20px; bottom: 20px; display: flex; align-items: center; gap: 16px; padding: 14px 28px 14px 14px; }
+.hud-avatar { width: 48px; height: 48px; flex: none; overflow: hidden; border: 1px solid var(--slate-line);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+.hud-avatar svg { width: 100%; height: 100%; display: block; }
+.hud-explorer-card b { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 14px; letter-spacing: .14em; text-transform: uppercase; }
 
 /* ---------- 5. Draggable planet ---------- */
 body.planet-draggable { cursor: grab; }
@@ -204,56 +154,43 @@ body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user
 
 /* ---------- 6. Signal markers + vector guide line (kept inside the planet) ---------- */
 .signal-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
-
 /* .signal is a zero-size anchor on the surface point. White = unknown, green = recovered. */
-.signal { --sig: #ffffff; --flow: #7fd0ff; --run: 200px; position: absolute; left: 0; top: 0; width: 0; height: 0; color: var(--sig);
+.signal { --sig: #ffffff; --d: 40px; position: absolute; left: 0; top: 0; width: 0; height: 0; color: var(--sig);
   cursor: pointer; will-change: transform; outline: none; font-family: var(--font-ui); }
 
-.signal__dot { position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%;
-  display: grid; place-items: center; border: 2px solid var(--sig); background: rgba(6, 16, 34, .65);
-  box-shadow: 0 0 18px var(--sig), inset 0 0 10px rgba(255, 255, 255, .3); }
-.signal__dot i { width: 9px; height: 9px; border-radius: 50%; background: var(--sig); box-shadow: 0 0 10px var(--sig); }
-.signal__dot::before, .signal__dot::after { content: ''; position: absolute; border-radius: 50%; }
-.signal__dot::before { inset: -8px; border: 1px dashed var(--sig); animation: dotSpin 7s linear infinite; }
-.signal__dot::after { inset: -12px; border: 2px solid var(--sig); animation: signalPing 2s ease-out infinite; }
-@keyframes dotSpin { to { transform: rotate(360deg); } }
-@keyframes signalPing { from { transform: scale(.6); opacity: 1; } to { transform: scale(2); opacity: 0; } }
+/* invisible hit area on the point (the equipment panel grows out of it) */
+.signal__dot { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; }
 
-/* the vector: its size is set from JS so it always ends inside the planet */
-.signal__vector { position: absolute; left: 0; top: -54px; overflow: visible; transform-origin: 0 100%;
-  pointer-events: none; filter: drop-shadow(0 0 6px var(--sig)); }
-.signal__vector path { fill: none; stroke: var(--sig); stroke-linecap: round; stroke-linejoin: round; }
-.signal__vector .v-base { stroke-width: 2.6; }
-.signal__vector .v-flow { stroke: var(--flow); stroke-width: 2.8; stroke-dasharray: 12 88; animation: vFlow 2s linear infinite; }
-.signal__vector .v-tick { stroke-width: 1.6; opacity: .8; }
-.signal__vector .v-node { fill: var(--sig); stroke: none; }
-@keyframes vFlow { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+/* thin 45° arrow, tip on the surface point. Default = tag goes down-right. */
+.signal__arrow { position: absolute; left: 0; top: 0; width: var(--d); height: var(--d); overflow: visible;
+  pointer-events: none; transform-origin: 0 0; }
+.signal__arrow path { fill: none; stroke: var(--sig); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
 
-/* label tag sits over the horizontal run, so it is inside the planet too */
-.signal__text { position: absolute; bottom: 52px; display: flex; flex-direction: column; gap: 3px; box-sizing: border-box;
-  max-width: calc(var(--run) - 6px); padding: 6px 12px; background: var(--slate); border: 1px solid var(--slate-line); backdrop-filter: blur(6px); }
-.signal__text strong { font-size: 13px; line-height: 1.25; letter-spacing: .05em; color: #fff; }
-.signal__text small { font-size: 9px; line-height: 1.3; letter-spacing: .14em; text-transform: uppercase; color: rgba(255, 255, 255, .78); }
-.signal--right .signal__text { left: 52px; border-left: 3px solid var(--sig); }
-.signal--left .signal__text { right: 52px; text-align: right; border-right: 3px solid var(--sig); }
-.signal.is-down .signal__text { bottom: auto; top: 52px; }
+/* the tag: bold title cell + dimmer hint cell, cut bottom-right corner */
+.signal__tag { position: absolute; left: var(--d); top: var(--d); display: flex; white-space: nowrap;
+  font-size: 10px; letter-spacing: .16em; text-transform: uppercase; backdrop-filter: blur(4px);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%); }
+.signal__tag strong { padding: 9px 14px; font-weight: 700; color: #fff; background: rgba(6, 10, 24, .88);
+  border-top: 2px solid var(--sig); transition: background .2s; }
+.signal__tag small { padding: 9px 14px; font-size: inherit; line-height: inherit; color: rgba(255, 255, 255, .65);
+  background: rgba(70, 76, 92, .78); border-top: 2px solid transparent; border-left: 1px solid rgba(255, 255, 255, .12); }
 
-/* direction flips (toward the planet's centre, up or down) */
-.signal--left .signal__vector { transform: scaleX(-1); }
-.signal.is-down .signal__vector { transform: scaleY(-1); }
-.signal--left.is-down .signal__vector { transform: scale(-1, -1); }
+/* direction flips (tag toward the planet's centre) */
+.signal--left .signal__tag { left: auto; right: var(--d); }
+.signal.is-up .signal__tag { top: auto; bottom: var(--d); }
+.signal--left .signal__arrow { transform: scaleX(-1); }
+.signal.is-up .signal__arrow { transform: scaleY(-1); }
+.signal--left.is-up .signal__arrow { transform: scale(-1, -1); }
 
-.signal:hover .signal__dot, .signal:focus-visible .signal__dot, .signal.is-active .signal__dot { box-shadow: 0 0 28px var(--sig), 0 0 8px #fff; }
-.signal:hover .signal__vector, .signal.is-active .signal__vector { filter: drop-shadow(0 0 12px var(--sig)); }
+.signal:hover .signal__tag strong, .signal:focus-visible .signal__tag strong, .signal.is-active .signal__tag strong { background: rgba(20, 40, 90, .95); }
 
 /* recovered equipment turns green */
-.signal.is-found { --sig: var(--ok); --flow: #fff; }
-.signal.is-found .signal__text small { color: var(--ok); }
+.signal.is-found { --sig: var(--ok); }
+.signal.is-found .signal__tag small { color: var(--ok); }
 
-/* signal on the far side: dashed, just inside the planet edge, click to rotate to it */
-.signal.is-behind .signal__dot { border-style: dashed; }
-.signal.is-behind .signal__vector .v-base { stroke-dasharray: 8 7; }
-.signal.is-behind .signal__text { border-style: dashed; border-color: rgba(255, 255, 255, .5); }
+/* far side: dimmer tag, no white edge, click to rotate */
+.signal.is-behind .signal__tag strong { background: rgba(70, 76, 92, .78); border-top-color: transparent; color: rgba(255, 255, 255, .85); }
+.signal.is-behind .signal__arrow { opacity: .8; }
 
 /* ---------- 7. Equipment panel (expands from the marker) ---------- */
 .eq-overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
@@ -272,21 +209,8 @@ body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user
   color: #fff; background: rgba(91, 155, 255, .18); border: 1px solid var(--blue); transition: box-shadow .2s, background .2s; }
 .eq-btn:hover { background: rgba(91, 155, 255, .35); box-shadow: 0 0 18px rgba(91, 155, 255, .6); }
 
-/* ---------- Responsive ---------- */
-@media (max-width: 1050px) {
-  .hud-hint { display: none; }
-  .hud-title { width: min(420px, 44vw); }
-  .hud-desc { font-size: 15px; }
-  .hud-data { width: min(290px, 40vw); }
-  .hud-strip { grid-template-columns: repeat(2, auto); }
-  .planet-hud::after { display: none; }
-}
 @media (max-width: 700px) {
-  .hud-radar, .hud-strip { display: none; }
-  .hud-title { width: calc(100vw - 52px); }
-  .hud-top-right { top: auto; bottom: 26px; right: 26px; }
-  .hud-data { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .signal__dot::before, .signal__dot::after, .signal__vector .v-flow, .planet-hud::after, .hud-radar__sweep, .hud-chip i { animation: none; }
+  .hud-name { font-size: 30px; }
+  .hud-strip { gap: 0 18px; padding: 12px 14px; }
+  .hud-explorer-card { display: none; }
 }

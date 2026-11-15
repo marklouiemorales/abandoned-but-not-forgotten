@@ -98,7 +98,7 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
 
       const planet = createScene(planetContainer, {
         modelUrl,
-        fill: 2.0,
+        fill: 1.5,
         rotationSpeed: 0.0008,
       });
       planet.ready.then(() => console.log(`3D ${label} loaded and ready to explore!`, explorer));
@@ -333,13 +333,13 @@ const phases = {
   registration: introPhase,
   briefing: introPhase,
   equipment: {
-    enter({ state, goTo }) {
+    enter({ state, goTo, planet, entityId }) {
       const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
-      const entity = ENTITIES[state.entityId] || requestedEntity;
-      // planet comes from where you clicked (state.planet), else from the entity itself
-      const planetKey = (state.planet || entity.planet) === 'mars' ? 'mars' : 'moon';
+      const entity = ENTITIES[entityId] || requestedEntity;
+      // planet comes from where you clicked (context.planet), else from the entity itself
+      const planetKey = (planet || entity.planet) === 'mars' ? 'mars' : 'moon';
       const entities = PLANET_EQUIPMENT[planetKey].includes(entity) ? PLANET_EQUIPMENT[planetKey] : [entity];
-      if (state.entityId) recovered.add(state.entityId); // not for /?view= dev shortcuts
+      if (entityId) recovered.add(entityId); // not for /?view= dev shortcuts
       return createEquipmentViewer(document.body, {
         entities, // the < / > pager walks through these
         entity,   // which one opens first

@@ -40,76 +40,55 @@ export function createPlanetHud(parent, options = {}) {
 
   const root = document.createElement('div');
   root.className = 'planet-hud';
-  root.innerHTML = `
-    <div class="hud-rail"></div>
-
-    <!-- TOP LEFT: title -->
+   root.innerHTML = `
+    <!-- TOP LEFT: title, objective, explorer, signal list -->
     <header class="hud-title">
-      <div class="hud-kicker hud-kicker--accent">${escapeHtml(location.eyebrow || 'Location')}</div>
+      <div class="hud-kicker">Location</div>
       <h1 class="hud-name">${escapeHtml(location.name)}</h1>
-      <div class="hud-sub"><i></i>${escapeHtml(location.subtitle)}</div>
-      <p class="hud-desc">${escapeHtml(location.description)}</p>
-      <div class="hud-chips">
-        <span class="hud-chip hud-chip--live"><i></i>Scan active</span>
-        <span class="hud-chip">${signals.length} signals detected</span>
-        <span class="hud-chip">Surface survey</span>
-      </div>
-    </header>
-
-    <!-- TOP CENTER: hint -->
-    <div class="hud-hint" data-hint>
-      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
-      <span>Drag to rotate</span><em></em><span>Select a signal</span>
-    </div>
-
-    <!-- TOP RIGHT: buttons + radar -->
-    <div class="hud-top-right">
-      <div class="hud-buttons">
-        <button class="hud-btn" data-action="home" aria-label="Home">
-          <span class="hud-btn__ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></span>Home
-        </button>
-        <button class="hud-btn" data-action="journal" aria-label="Journal">
-          <span class="hud-btn__ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h7a3 3 0 013 3v12a2 2 0 00-2-2H2z"/><path d="M22 5h-7a3 3 0 00-3 3v12a2 2 0 012-2h8z"/></svg></span>Journal
-        </button>
-      </div>
-      <div class="hud-panel hud-radar" aria-hidden="true">
-        <div class="hud-radar__dial"><i class="hud-radar__sweep"></i><b></b><b></b><b></b></div>
-        <div class="hud-radar__lbl"><span>Signal scan</span><em>${signals.length} contacts</em></div>
-      </div>
-    </div>
-
-    <!-- BOTTOM LEFT: readout strip -->
-    <div class="hud-panel hud-strip">
-      <div><small>Target body</small><b>${escapeHtml(location.name)}</b></div>
-      <div><small>Signals</small><b>${signals.length}</b></div>
-      <div><small>Recovered</small><b><span data-obj-found>0</span> / ${signals.length}</b></div>
-      <div><small>Status</small><b class="hud-ok">Scanning</b></div>
-      <span class="hud-strip__cap">${escapeHtml(location.footer)}</span>
-    </div>
-
-    <!-- BOTTOM RIGHT: explorer + objective -->
-    <aside class="hud-panel hud-data hud-outline">
-      <div class="hud-data__head"><span>Explorer</span><b>Ready</b></div>
-      <div class="hud-explorer">
-        <span class="hud-explorer__who"><b data-name></b><small data-id></small></span>
-        <span class="hud-explorer__total"><small>Equipment</small><b><span data-total-found>${overallFound}</span> / ${totalMissions}</b></span>
-      </div>
-
-      <div class="hud-data__head"><span>Objective</span><b><span data-obj-found>0</span> / ${signals.length}</b></div>
-      <div class="hud-segments">
-        ${signals.map((s) => `<i data-seg="${escapeHtml(s.id)}"></i>`).join('')}
-      </div>
       <p class="hud-objective">${escapeHtml(location.objective)}</p>
+      <div class="hud-explorer-line" data-explorer-id></div>
       <ul class="hud-list">
         ${signals.map((s) => `<li data-id="${escapeHtml(s.id)}"><i></i><span>${escapeHtml(s.label)}</span></li>`).join('')}
       </ul>
+    </header>
+
+    <!-- TOP RIGHT: round icon buttons -->
+    <div class="hud-top-right">
+      <div class="hud-buttons">
+        <button class="hud-btn" data-action="home" aria-label="Home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        </button>
+        <button class="hud-btn" data-action="journal" aria-label="Journal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h7a3 3 0 013 3v12a2 2 0 00-2-2H2z"/><path d="M22 5h-7a3 3 0 00-3 3v12a2 2 0 012-2h8z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- BOTTOM LEFT: readout -->
+    <div class="hud-card hud-strip">
+      <div><small>Recovered</small><b><span data-obj-found>0</span> / ${signals.length}</b></div>
+      <div><small>Equipment</small><b><span data-total-found>${overallFound}</span> / ${totalMissions}</b></div>
+      <div><small>Status</small><b class="hud-ok">Scanning</b></div>
+    </div>
+
+    <!-- BOTTOM RIGHT: explorer -->
+    <aside class="hud-card hud-explorer-card">
+      <span class="hud-avatar">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <rect width="100" height="100" fill="#07123a"/>
+          <circle cx="50" cy="52" r="20" fill="#e8643a"/>
+          <ellipse cx="50" cy="52" rx="38" ry="11" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="2" transform="rotate(-20 50 52)"/>
+          <circle cx="80" cy="30" r="3" fill="#fff"/><circle cx="18" cy="24" r="1.6" fill="#fff" opacity=".7"/>
+        </svg>
+      </span>
+      <b data-name></b>
     </aside>
   `;
   parent.appendChild(root);
 
   // Explorer text goes in as text (it is user input), never as HTML.
   root.querySelector('[data-name]').textContent = explorer.name || 'Explorer';
-  root.querySelector('[data-id]').textContent =
+  root.querySelector('[data-explorer-id]').textContent =
     [explorer.id, explorer.rank].filter(Boolean).join(' · ');
 
   root.querySelector('[data-action="home"]').addEventListener('click', onHome);
@@ -134,9 +113,7 @@ export function createPlanetHud(parent, options = {}) {
     dim(on) {
       root.classList.toggle('is-dim', !!on);
     },
-    hideHint() {
-      root.querySelector('[data-hint]').classList.add('is-hidden');
-    },
+    hideHint() {},   // hint removed
     dispose() {
       root.remove();
     },

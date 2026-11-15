@@ -32,7 +32,7 @@ export const MARS_LOCATION = {
 export const MARS_SIGNALS = [
   {
     id: 'mars-signal-1', index: 1, lat: 19, lon: -33,
-    label: 'Unknown signal', hint: 'Select to investigate',
+    label: 'Unknown signal', hint: 'Click to investigate',
     equipment: {
       id: 'sojourner',
       name: 'Sojourner Rover',
@@ -46,7 +46,7 @@ export const MARS_SIGNALS = [
   },
   {
     id: 'mars-signal-2', index: 2, lat: 18, lon: 77,
-    label: 'Unknown signal', hint: 'Select to investigate',
+    label: 'Unknown signal', hint: 'Click to investigate',
     equipment: {
       id: 'ingenuity',
       name: 'Ingenuity Helicopter',
@@ -60,7 +60,7 @@ export const MARS_SIGNALS = [
   },
   {
     id: 'mars-signal-3', index: 3, lat: 5, lon: 135,
-    label: 'Unknown signal', hint: 'Select to investigate',
+    label: 'Unknown signal', hint: 'Click to investigate',
     equipment: {
       id: 'insight',
       name: 'InSight Lander',

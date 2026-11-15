@@ -31,7 +31,7 @@ function latLonToDirection(lat, lon) {
   );
 }
 
-const BEHIND_HINT = 'Behind planet · click to rotate';
+const BEHIND_HINT = 'Click to rotate';
 
 // vector geometry (px)
 const DIAG = 46;      // length of the angled part (45 degrees)
@@ -60,8 +60,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     minFacing = 0.12,    // below this the signal counts as "behind the planet"
     fadeRange = 0.18,    // front markers fade in over this range above minFacing
     edgeMargin = 40,     // px outside the screen before hiding
-    insideMargin = 0.9,  // vector end must stay within this fraction of the planet radius
-    behindDepth = 0.84,  // behind-markers sit at this fraction of the radius
+    behindDepth = 1.0,
   } = options;
 
   const pivot = getPlanetPivot(planet);
@@ -88,14 +87,11 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     el.dataset.id = sig.id;
     el.style.visibility = 'hidden';
     el.innerHTML = `
-      <svg class="signal__vector" aria-hidden="true">
-        <path class="v-base"/>
-        <path class="v-flow" pathLength="100"/>
-        <path class="v-tick"/>
-        <path class="v-node"/>
+      <svg class="signal__arrow" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M1 1H11M1 1V11M1 1L40 40"/>
       </svg>
-      <span class="signal__dot"><i></i></span>
-      <span class="signal__text">
+      <span class="signal__dot"></span>
+      <span class="signal__tag">
         <strong></strong>
         <small></small>
       </span>`;
@@ -104,13 +100,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     layer.appendChild(el);
 
     const it = {
-      sig, anchor, el, side: 'right', down: false, behind: false, found: false,
-      run: -1,
-      svg: el.querySelector('.signal__vector'),
-      pBase: el.querySelector('.v-base'),
-      pFlow: el.querySelector('.v-flow'),
-      pTick: el.querySelector('.v-tick'),
-      pNode: el.querySelector('.v-node'),
+      sig, anchor, el, side: 'right', up: false, behind: false, found: false,
     };
 
     const select = (e) => {
@@ -163,31 +153,6 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     small.textContent = behind ? BEHIND_HINT : (it.found ? 'Equipment recovered' : it.sig.hint);
   }
 
-  // Draw the vector for a given run length (only when the length changes a bit).
-  function setRun(it, run) {
-    const r = Math.round(run / 4) * 4;
-    if (r === it.run) return;
-    it.run = r;
-    const g = buildVector(r);
-    it.svg.setAttribute('width', g.width);
-    it.svg.setAttribute('height', HEIGHT);
-    it.svg.setAttribute('viewBox', `0 0 ${g.width} ${HEIGHT}`);
-    it.pBase.setAttribute('d', g.base);
-    it.pFlow.setAttribute('d', g.flow);
-    it.pTick.setAttribute('d', g.tick);
-    it.pNode.setAttribute('d', g.node);
-    it.el.style.setProperty('--run', `${r}px`);
-  }
-
-  // Room for the horizontal run so its END stays inside the disc (-1 = no room).
-  function roomFor(x, y, dirY, sgn, cx, cy, rLimit) {
-    const dyc = (y + dirY * DIAG) - cy;
-    const rr = rLimit * rLimit - dyc * dyc;
-    if (rr <= 0) return -1;
-    const hw = Math.sqrt(rr);
-    return sgn > 0 ? (cx + hw) - x - DIAG : x - DIAG - (cx - hw);
-  }
-
   // ---- Per-frame projection ----
   const world = new THREE.Vector3();
   const normal = new THREE.Vector3();
@@ -210,7 +175,6 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     const d = Math.max(cam.position.distanceTo(centreW), R * 1.01);
     const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     const radiusPx = ((h / 2) / tanV) * (R / Math.sqrt(d * d - R * R));
-    const rLimit = radiusPx * insideMargin;
 
     for (const it of items) {
       const { anchor, el } = it;
@@ -242,24 +206,17 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
         continue;
       }
 
-      // vector points toward the planet's centre; goes up or down, whichever has more room
+      // the tag sits toward the planet's centre, sideways and up/down
       const side = x < cx ? 'right' : 'left';
-      const sgn = side === 'right' ? 1 : -1;
-      const roomUp = roomFor(x, y, -1, sgn, cx, cy, rLimit);
-      const roomDown = roomFor(x, y, 1, sgn, cx, cy, rLimit);
-      const down = roomDown > roomUp;
-      const room = Math.max(roomUp, roomDown);
-      const run = Math.min(MAX_RUN, Math.max(MIN_RUN, room));
-
+      const up = y >= cy;           // point below centre -> tag goes up
       if (side !== it.side) {
         el.classList.replace(`signal--${it.side}`, `signal--${side}`);
         it.side = side;
       }
-      if (down !== it.down) {
-        it.down = down;
-        el.classList.toggle('is-down', down);
+      if (up !== it.up) {
+        it.up = up;
+        el.classList.toggle('is-up', up);
       }
-      setRun(it, run);
 
       el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
       el.style.opacity = behind ? '0.9' : String(Math.min(1, (facing - minFacing) / fadeRange));
