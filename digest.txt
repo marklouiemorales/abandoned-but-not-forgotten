@@ -1586,13 +1586,13 @@ const phases = {
   registration: introPhase,
   briefing: introPhase,
   equipment: {
-    enter({ state, goTo }) {
+    enter({ state, goTo, planet, entityId }) {
       const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
-      const entity = ENTITIES[state.entityId] || requestedEntity;
-      // planet comes from where you clicked (state.planet), else from the entity itself
-      const planetKey = (state.planet || entity.planet) === 'mars' ? 'mars' : 'moon';
+      const entity = ENTITIES[entityId] || requestedEntity;
+      // planet comes from where you clicked (context.planet), else from the entity itself
+      const planetKey = (planet || entity.planet) === 'mars' ? 'mars' : 'moon';
       const entities = PLANET_EQUIPMENT[planetKey].includes(entity) ? PLANET_EQUIPMENT[planetKey] : [entity];
-      if (state.entityId) recovered.add(state.entityId); // not for /?view= dev shortcuts
+      if (entityId) recovered.add(entityId); // not for /?view= dev shortcuts
       return createEquipmentViewer(document.body, {
         entities, // the < / > pager walks through these
         entity,   // which one opens first
@@ -1748,12 +1748,96 @@ body, html { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%;
 .hud-meta dt { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: var(--blue); }
 .hud-meta dd { margin: 3px 0 0; font-size: 13px; font-weight: 600; color: #fff; }
 
+/* ---------- 4. Planet HUD layout ---------- */
+.planet-hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; font-family: var(--font-ui); transition: opacity .35s ease; }
+.planet-hud.is-dim { opacity: .2; }
+.planet-hud button { pointer-events: auto; }
+
+/* shared card: dark glass, white top edge, cut bottom-right corner */
+.hud-card { position: absolute; box-sizing: border-box; color: #fff;
+  background: rgba(6, 10, 24, .86); border-top: 2px solid #fff; backdrop-filter: blur(6px);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%); }
+
+/* TOP LEFT */
+.hud-title { position: absolute; top: 20px; left: 20px; width: min(420px, 42vw); pointer-events: none;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .9); }
+.hud-title .hud-kicker { font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--blue); }
+.hud-name { margin: 8px 0 12px; font-size: clamp(34px, 4.4vw, 56px); line-height: 1; letter-spacing: .08em;
+  text-transform: uppercase; font-weight: 600; color: #e6eeff; }
+.hud-objective { margin: 0 0 18px; font-family: var(--font-body); font-weight: 600; font-size: 15px; letter-spacing: .02em;
+  color: rgba(230, 238, 255, .92); }
+.hud-explorer-line { margin-bottom: 8px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(210, 225, 255, .75); }
+.hud-list { list-style: none; margin: 0; padding: 0; }
+.hud-list li { display: flex; align-items: center; gap: 12px; padding: 4px 0; font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: rgba(225, 235, 255, .85); }
+.hud-list li i { width: 8px; height: 8px; flex: none; border-radius: 50%; border: 1px solid currentColor; }
+.hud-list li.is-found { color: #fff; }
+.hud-list li.is-found i { background: var(--ok); border-color: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+/* TOP RIGHT: round icon buttons */
+.hud-top-right { position: absolute; top: 18px; right: 18px; }
+.hud-buttons { display: flex; gap: 8px; }
+.hud-btn { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; cursor: pointer; color: #dbe8ff;
+  background: rgba(6, 10, 24, .7); border: 1px solid var(--slate-line); border-radius: 50%; backdrop-filter: blur(6px);
+  transition: box-shadow .2s, transform .2s; }
+.hud-btn:hover { box-shadow: 0 0 16px rgba(91, 155, 255, .6); transform: translateY(-1px); }
+.hud-btn svg { width: 16px; height: 16px; display: block; }
+
+/* BOTTOM LEFT: readout */
+.hud-strip { left: 20px; bottom: 20px; display: grid; grid-template-columns: repeat(3, auto); gap: 0 34px; padding: 16px 24px 16px 20px; }
+.hud-strip small { display: block; font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: rgba(210, 225, 255, .6); }
+.hud-strip b { display: block; margin-top: 8px; font-size: 15px; font-weight: 600; letter-spacing: .12em; white-space: nowrap; }
+.hud-ok { color: var(--ok); }
+
+/* BOTTOM RIGHT: explorer */
+.hud-explorer-card { right: 20px; bottom: 20px; display: flex; align-items: center; gap: 16px; padding: 14px 28px 14px 14px; }
+.hud-avatar { width: 48px; height: 48px; flex: none; overflow: hidden; border: 1px solid var(--slate-line);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+.hud-avatar svg { width: 100%; height: 100%; display: block; }
+.hud-explorer-card b { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 14px; letter-spacing: .14em; text-transform: uppercase; }
+
 /* ---------- 5. Draggable planet ---------- */
 body.planet-draggable { cursor: grab; }
 body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user-select: none; }
 
 /* ---------- 6. Signal markers + vector guide line (kept inside the planet) ---------- */
 .signal-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
+/* .signal is a zero-size anchor on the surface point. White = unknown, green = recovered. */
+.signal { --sig: #ffffff; --d: 40px; position: absolute; left: 0; top: 0; width: 0; height: 0; color: var(--sig);
+  cursor: pointer; will-change: transform; outline: none; font-family: var(--font-ui); }
+
+/* invisible hit area on the point (the equipment panel grows out of it) */
+.signal__dot { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; }
+
+/* thin 45Â° arrow, tip on the surface point. Default = tag goes down-right. */
+.signal__arrow { position: absolute; left: 0; top: 0; width: var(--d); height: var(--d); overflow: visible;
+  pointer-events: none; transform-origin: 0 0; }
+.signal__arrow path { fill: none; stroke: var(--sig); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* the tag: bold title cell + dimmer hint cell, cut bottom-right corner */
+.signal__tag { position: absolute; left: var(--d); top: var(--d); display: flex; white-space: nowrap;
+  font-size: 10px; letter-spacing: .16em; text-transform: uppercase; backdrop-filter: blur(4px);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%); }
+.signal__tag strong { padding: 9px 14px; font-weight: 700; color: #fff; background: rgba(6, 10, 24, .88);
+  border-top: 2px solid var(--sig); transition: background .2s; }
+
+/* direction flips (tag toward the planet's centre) */
+.signal--left .signal__tag { left: auto; right: var(--d); }
+.signal.is-up .signal__tag { top: auto; bottom: var(--d); }
+.signal--left .signal__arrow { transform: scaleX(-1); }
+.signal.is-up .signal__arrow { transform: scaleY(-1); }
+.signal--left.is-up .signal__arrow { transform: scale(-1, -1); }
+
+.signal:hover .signal__tag strong, .signal:focus-visible .signal__tag strong, .signal.is-active .signal__tag strong { background: rgba(20, 40, 90, .95); }
+
+/* recovered equipment turns green */
+.signal.is-found { --sig: var(--ok); }
+.signal.is-found .signal__tag strong { border-top-color: var(--ok); }
+
+/* far side: dimmer tag, no white edge, click to rotate */
+.signal.is-behind .signal__tag strong { background: rgba(70, 76, 92, .78); border-top-color: transparent; color: rgba(255, 255, 255, .85); }
+.signal.is-behind .signal__arrow { opacity: .8; }
 
 /* ---------- 7. Equipment panel (expands from the marker) ---------- */
 .eq-overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
@@ -2027,8 +2111,6 @@ function latLonToDirection(lat, lon) {
   );
 }
 
-const BEHIND_HINT = 'Click to rotate';
-
 // vector geometry (px)
 const DIAG = 46;      // length of the angled part (45 degrees)
 const PAD = 8;        // room above/below the horizontal run for ticks + node
@@ -2089,10 +2171,8 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
       <span class="signal__dot"></span>
       <span class="signal__tag">
         <strong></strong>
-        <small></small>
       </span>`;
     el.querySelector('strong').textContent = sig.label;
-    el.querySelector('small').textContent = sig.hint;
     layer.appendChild(el);
 
     const it = {
@@ -2145,8 +2225,6 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     if (it.behind === behind) return;
     it.behind = behind;
     it.el.classList.toggle('is-behind', behind);
-    const small = it.el.querySelector('small');
-    small.textContent = behind ? BEHIND_HINT : (it.found ? 'Equipment recovered' : it.sig.hint);
   }
 
   // ---- Per-frame projection ----
@@ -2230,7 +2308,6 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
       it.found = true;
       it.el.classList.add('is-found');
       it.el.querySelector('strong').textContent = name || (it.sig.equipment && it.sig.equipment.name) || it.sig.label;
-      it.el.querySelector('small').textContent = it.behind ? BEHIND_HINT : 'Equipment recovered';
     },
     resume() {
       activeId = null;
