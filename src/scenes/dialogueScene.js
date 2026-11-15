@@ -113,7 +113,7 @@ export const DIALOGUE_CONFIG = {
 
 const BLACK_ID = 'rm-blackout';
 
-function blackoutScreen(fadeMs) {
+export function blackoutScreen(fadeMs) {
   document.getElementById(BLACK_ID)?.remove();
   const f = document.createElement('div');
   f.id = BLACK_ID;
@@ -577,7 +577,7 @@ async function loadObj(urls) {
   throw new Error('Shuttle OBJ not found. Tried: ' + tried.join(', '));
 }
 
-function createShuttleStage(container, { objUrls, onLoaded, onError, onZoomed }) {
+export function createShuttleStage(container, { objUrls, onLoaded, onError, onZoomed }) {
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const amp = calm ? 0.25 : 1;
 

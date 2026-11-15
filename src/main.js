@@ -1,7 +1,7 @@
 import './styles.css';
 
 import { createNameInputScene } from './scenes/nameInputScene.js';
-import { createBriefingScene, revealFromBlack } from './scenes/dialogueScene.js';
+import { createBriefingScene, revealFromBlack, createDialogueScene, createShuttleStage, blackoutScreen } from './scenes/dialogueScene.js';
 import { createMoonScene } from './scenes/moonScene.js';
 import { createPlanetHud } from './scenes/planetHud.js';
 import { createMarsScene } from './scenes/marsScene.js';
@@ -152,6 +152,11 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
         }
       });
 
+      if (key === 'moon' && !moonToMarsDone && MOON_SIGNALS.every((s) => recovered.has(s.equipment.id))) {
+        moonToMarsDone = true;
+        setTimeout(() => playMoonToMars({ explorer, hud, controls, goTo, planet }), 900);
+      }
+
       return { planet, controls, hud, markers, panel };
     },
     exit({ scene }) {
@@ -162,6 +167,142 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
       scene.planet.dispose();
     },
   };
+}
+
+/* Moon -> Mars transition */
+const MARS_TRANSITION_SCRIPT = [
+  {
+    type: 'say',
+    text: 'Space Commander {name}! Come in, mission control! Our Deep Space Network tracking shows you’ve successfully visited the Apollo 11 Lunar Module Eagle, Surveyor 3, and Apollo 15 Lunar Roving Vehicle (LRV-1). You’ve officially honored these silent pioneers, and your lunar mission is complete!',
+  },
+  {
+    type: 'say',
+    text: 'Hold on, Space Commander {name}, don’t head back to Earth just yet! We’ve just received an urgent directive from Mission Control. Your stellar work on the Moon proved you’re ready for a much bigger challenge.',
+  },
+  {
+    type: 'ask',
+    text: 'Deep across interplanetary space lies the Red Planet—Mars! There are iconic hardware heroes waiting to be discovered on its dusty plains. Re-board your vessel and set a direct course for Mars, we’ll transmit your exact mission targets as soon as you touch down!',
+    acceptLabel: 'Set course for Mars',
+    declineLabel: 'Hear it again',
+  },
+];
+
+const SHUTTLE_OBJ_URLS = [
+  '/assets/shuttle-fire.obj',
+  '/assets/models/shuttle-fire.obj',
+  '/assets/models/shuttle/shuttle-fire.obj',
+  '/shuttle-fire.obj',
+];
+
+const PLANET_CONTAINER_CSS = 'width: 100vw; height: 100vh; position: relative; overflow: hidden; background: #000;';
+
+const MARS_TRANSITION_CSS = `
+  .planet-hud > * { transition: opacity .6s ease; }
+  .planet-hud.mt-fade > *:not(.hud-top-right) { opacity: 0; pointer-events: none; }
+  .planet-hud.mt-fade .hud-radar,
+  .planet-hud.mt-fade [data-action="journal"] { opacity: 0; pointer-events: none; }
+  .planet-hud.mt-fade .hud-top-right { pointer-events: auto; }
+  .signal-layer { transition: opacity .6s ease; }
+  .planet-hud::before, .planet-hud::after { transition: opacity .6s ease; }
+  .planet-hud.mt-fade::before, .planet-hud.mt-fade::after { opacity: 0; }
+  .signal-layer.mt-fade { opacity: 0; pointer-events: none; }
+  .rm-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 55; }
+`;
+
+let moonToMarsDone = false;
+
+function ensureMarsTransitionStyles() {
+  if (document.getElementById('mt-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'mt-styles';
+  s.textContent = MARS_TRANSITION_CSS;
+  document.head.appendChild(s);
+}
+
+function playMoonToMars({ explorer, hud, controls, goTo, planet }) {
+  ensureMarsTransitionStyles();
+  controls.hold('transition');
+
+  // 1. border UI fades out (Home stays)
+  hud.el.classList.add('mt-fade');
+  document.querySelector('.signal-layer')?.classList.add('mt-fade');
+
+  // 2. the Moon recedes to the upper right, then the dialogue starts
+  let started = false;
+  const start = () => {
+    if (started) return;
+    started = true;
+    runMarsDialogue({ explorer, goTo });
+  };
+
+  // safety net: start the dialogue even if the recede never resolves
+  setTimeout(start, 3000);
+
+  planet.recedeTo({ screenX: 0.75, screenY: 0.25, size: 0.3, depth: 1.7, dim: 0.3, duration: 1400 })
+    .then(start)
+    .catch((err) => {
+      console.error('[recede] failed', err);
+      start();
+    });
+}
+
+function runMarsDialogueLEGACY({ explorer, goTo }) {
+  ensureMarsTransitionStyles();
+  controls.hold('transition');
+
+  // 1. border UI fades out (Home stays)
+  hud.el.classList.add('mt-fade');
+  document.querySelector('.signal-layer')?.classList.add('mt-fade');
+
+  // 2. the Moon recedes to the upper right (see step 9)
+
+  // 3. mission control dialogue, starts once the Moon has settled
+  let startedDialogue = false;
+  const startDialogue = () => {
+    if (startedDialogue) return;
+    startedDialogue = true;
+    runMarsDialogue();
+  };
+  setTimeout(startDialogue, 3000);
+  try {
+    planet.recedeTo({ screenX: 0.75, screenY: 0.25, size: 0.3, depth: 1.7, dim: 0.3, duration: 1400 }).then(startDialogue);
+  } catch (err) {
+    console.error('[recede] failed', err);
+    startDialogue();
+  }
+}
+
+function runMarsDialogue({ explorer, goTo }) {
+  {
+    let stage = null;
+    const dlg = createDialogueScene(document.body, {
+      explorer,
+      config: { script: MARS_TRANSITION_SCRIPT, tasks: [] },
+      onAccept: () => {
+        // 4. rocket animation (placeholder: intro shuttle)
+        dlg.root.style.transition = 'opacity .8s';
+        dlg.root.style.opacity = '0';
+        dlg.root.style.pointerEvents = 'none';
+        stage = createShuttleStage(document.body, {
+          objUrls: SHUTTLE_OBJ_URLS,
+          onLoaded: () => {
+            stage.launch();
+            setTimeout(() => stage.depart(), 2400);
+          },
+          onError: (e) => console.error(e),
+        });
+        setTimeout(() => blackoutScreen(1400), 3800);
+
+        // 5. fade into the Mars scene
+        setTimeout(() => {
+          dlg.dispose();
+          stage?.dispose();
+          goTo('mars');
+          revealFromBlack(1400, 300);
+        }, 5200);
+      },
+    });
+  }
 }
 
 const introPhase = {

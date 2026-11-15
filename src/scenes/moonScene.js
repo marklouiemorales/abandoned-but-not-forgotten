@@ -71,6 +71,7 @@ export function createMoonScene(container, options = {}) {
     [1.0, 0.74, 0.58],  // orange (rare)
   ];
 
+  const starGeos = [];
   function starLayer({ count, size, minB, power }) {
     const R = 120;
     const pos = new Float32Array(count * 3);
@@ -105,6 +106,7 @@ export function createMoonScene(container, options = {}) {
       })
     );
     pts.frustumCulled = false;
+    starGeos.push({ geo, base: col.slice(), pos });
     return pts;
   }
 
@@ -218,8 +220,74 @@ export function createMoonScene(container, options = {}) {
   const resizeObserver = new ResizeObserver(fitCamera);
   resizeObserver.observe(container);
 
-  // ---------- Loop ----------
+  let tween = null;
+  const starDimDir = new THREE.Vector3();
+  const starWorldInv = new THREE.Quaternion();
+
+  function applyStarDim(dir, amount) {
+    for (const { geo, base, pos } of starGeos) {
+      const col = geo.attributes.color.array;
+      for (let i = 0; i < pos.length; i += 3) {
+        const d = (pos[i] * dir.x + pos[i + 1] * dir.y + pos[i + 2] * dir.z) / 120;
+        const f = 1 - amount * THREE.MathUtils.smoothstep(d, 0.8, 1.0);
+        col[i] = base[i] * f;
+        col[i + 1] = base[i + 1] * f;
+        col[i + 2] = base[i + 2] * f;
+      }
+      geo.attributes.color.needsUpdate = true;
+    }
+  }
+
+  // screenX / screenY: 0..1 across and down the screen (0.75, 0.25 = upper right)
+  // size: final diameter as a fraction of screen height (0.3 = 30%)
+  // depth: how far the Moon recedes, as a multiple of its starting distance
+  function recedeTo({
+    screenX = 0.75, screenY = 0.25, size = 0.3, depth = 1.7, dim = 0.3, duration = 1400,
+  } = {}) {
+    const camZ = camera.position.z;
+    const endDist = camZ * depth;
+    const halfH = endDist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const halfW = halfH * camera.aspect;
+    const nx = screenX * 2 - 1;
+    const ny = 1 - screenY * 2;
+    const toPos = new THREE.Vector3(nx * halfW, ny * halfH, camZ - endDist);
+    const toScale = size * halfH;
+
+    // star directions are stored in the stars group's local space, so convert the target there
+    starDimDir.copy(toPos).normalize().applyQuaternion(starWorldInv.copy(stars.quaternion).invert());
+
+    return new Promise((resolve) => {
+      tween = {
+        t: 0,
+        duration,
+        dim,
+        fromPos: moonPivot.position.clone(),
+        toPos,
+        fromScale: moonPivot.scale.x,
+        toScale,
+        dimDir: starDimDir.clone(),
+        resolve,
+      };
+    });
+  }
+
+  function stepTween(dt) {
+    if (!tween) return;
+    tween.t += dt * 1000;
+    const k = Math.min(1, tween.t / tween.duration);
+    const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; // ease-in-out cubic
+    moonPivot.position.lerpVectors(tween.fromPos, tween.toPos, e);
+    moonPivot.scale.setScalar(THREE.MathUtils.lerp(tween.fromScale, tween.toScale, e));
+    applyStarDim(tween.dimDir, tween.dim * e);
+    if (k >= 1) {
+      const done = tween.resolve;
+      tween = null;
+      done();
+    }
+  }
+
   const updaters = [];
+  updaters.push(stepTween);
   const clock = new THREE.Clock();
 
   renderer.setAnimationLoop(() => {
@@ -239,6 +307,7 @@ export function createMoonScene(container, options = {}) {
     moonPivot,
     ready,
     state,
+    recedeTo,
     onUpdate(fn) {
       updaters.push(fn);
     },
