@@ -383,10 +383,50 @@ function runMarsDialogue({ explorer, goTo }) {
   });
 }
 
+/* ---------- Start-scene background music ----------
+   Starts on "Start journey" (browsers only allow audio started by a click),
+   plays through the name screen and mission briefing, fades out when the
+   mission is accepted, and is gone before the Moon scene loads. */
+const START_MUSIC_URL = '/assets/audio/Start_Scene.mp3';
+const START_MUSIC_VOLUME = 0.35;
+const START_MUSIC_FADE_MS = 2200;   // matches the ship's departure fade
+
+let startMusic = null;
+
+function stopStartMusic(fadeMs = 0) {
+  const a = startMusic;
+  startMusic = null;
+  if (!a) return;
+  if (!fadeMs) { a.pause(); return; }
+  const from = a.volume;
+  const steps = Math.max(1, Math.round(fadeMs / 50));
+  let n = 0;
+  const id = setInterval(() => {
+    n++;
+    a.volume = Math.max(0, from * (1 - n / steps));
+    if (n >= steps) { clearInterval(id); a.pause(); }
+  }, fadeMs / steps);
+}
+
+function playStartMusic() {
+  stopStartMusic(0);
+  const a = new Audio(START_MUSIC_URL);
+  a.loop = true;
+  a.volume = START_MUSIC_VOLUME;
+  a.addEventListener('error', () => console.warn('[music] could not load', START_MUSIC_URL));
+  startMusic = a;
+  a.play().catch((err) => console.warn('[music] playback blocked:', err));
+}
+
 const introPhase = {
   enter({ goTo }) {
-    return createBriefingScene(document.body, {
-      stageContainer: planetContainer, // the 3D canvas goes in #moon-container
+    const onLaunch = () => playStartMusic();                          // "Start journey" clicked
+    const onDepart = () => stopStartMusic(START_MUSIC_FADE_MS);       // mission accepted, ship leaves
+    document.addEventListener('remember-me:launch', onLaunch);
+    document.addEventListener('remember-me:depart', onDepart);
+
+    const briefing = createBriefingScene(document.body, {
+      stageContainer: planetContainer,
       // name screen shows after the zoom; done(explorer) continues to the dialogue
       registerExplorer: (done) =>
         createNameInputScene(document.getElementById('registration-overlay'), {
@@ -395,10 +435,20 @@ const introPhase = {
         }),
       onEnd: (explorer) => {
         // screen is fully black here: build the Moon, then fade the black away
-        goTo('moon', { explorer });
+        stopStartMusic(0); goTo('moon', { explorer });
         revealFromBlack(1400, 400);
       },
     });
+
+    return {
+      ...briefing,
+      dispose() {
+        document.removeEventListener('remember-me:launch', onLaunch);
+        document.removeEventListener('remember-me:depart', onDepart);
+        stopStartMusic(0);            // safety: never let it leak into the Moon scene
+        briefing.dispose();
+      },
+    };
   },
   exit({ scene }) {
     scene.dispose();
