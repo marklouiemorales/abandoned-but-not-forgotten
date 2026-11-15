@@ -104,32 +104,32 @@ export const SURVEYOR3 = {
       speaker: 'Surveyor 3',
       text: 'Snap... Click... "Scavenger hunt in the Ocean of Storms!"',
       sfx: '/assets/audio/moon/camera-click.mp3',
-      audio: '/assets/audio/moon/surveyor3-1.mp3',
+      audio: '/assets/audio/Surveyor-1.mp3',
     },
     {
       speaker: 'Surveyor 3',
       text: 'Hi, Space Commander {name}! Welcome to the Ocean of Storms! I am Surveyor 3, a robotic lander built by Hughes Aircraft Company and managed by NASA\'s Jet Propulsion Laboratory (JPL).',
-      audio: '/assets/audio/moon/surveyor3-2.mp3',
+      audio: '/assets/audio/Surveyor-2.mp3',
     },
     {
       speaker: 'Surveyor 3',
       text: 'My journey began on April 17, 1967, riding atop an Atlas-Centaur rocket. Three days later, on April 20, 1967, I safely landed right inside this moon crater! I was equipped with a television camera and a motorized surface-sampler scoop, making me the very first probe to dig into the lunar soil!',
-      audio: '/assets/audio/moon/surveyor3-3.mp3',
+      audio: '/assets/audio/Surveyor-3.mp3',
     },
     {
       speaker: 'Surveyor 3',
       text: 'Before my batteries went dark during the freezing lunar night, I scooped up moon dust and beamed back 6,315 television images to help NASA engineers confirm that the Moon\'s surface was solid enough for humans to land on.',
-      audio: '/assets/audio/moon/surveyor3-4.mp3',
+      audio: '/assets/audio/Surveyor-4.mp3',
     },
     {
       speaker: 'Surveyor 3',
       text: 'But my story gets even cooler! In November 1969, Apollo 12 astronauts Pete Conrad and Alan Bean landed nearby, and on November 19, they walked right over to visit me inside my crater! They carefully detached my TV camera and soil scoop to bring them back home for scientists to study. To this day, parts of me are displayed at the Smithsonian National Air and Space Museum on Earth.',
-      audio: '/assets/audio/moon/surveyor3-5.mp3',
+      audio: '/assets/audio/Surveyor-5.mp3',
     },
     {
       speaker: 'Surveyor 3',
       text: 'Thank you for visiting me inside my crater, Space Commander {name}! Keep digging for knowledge, and never stop exploring!',
-      audio: '/assets/audio/moon/surveyor3-6.mp3',
+      audio: '/assets/audio/Surveyor-6.mp3',
     },
   ],
 

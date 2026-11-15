@@ -99,32 +99,32 @@ export const LRV = {
       speaker: 'Moon Buggy',
       text: 'Vroom... Beep-beep! "Humanity\'s first lunar road trip!"',
       sfx: '/assets/audio/moon/buggy-engine.mp3',
-      audio: '/assets/audio/moon/lrv-1.mp3',
+      audio: '/assets/audio/Moon Buggy-1.mp3',
     },
     {
       speaker: 'Moon Buggy',
       text: 'Hi, Space Commander {name}! Welcome to the mountainous region of Hadley-Apennine! I am the Apollo 15 Lunar Roving Vehicle, but everyone lovingly calls me the "Moon Buggy"! Boeing built me for NASA under the direction of the Marshall Space Flight Center.',
-      audio: '/assets/audio/moon/lrv-2.mp3',
+      audio: '/assets/audio/Moon Buggy-2.mp3',
     },
     {
       speaker: 'Moon Buggy',
       text: 'My journey began on July 26, 1971, riding aboard a giant Saturn V rocket. After landing on July 30, astronauts David Scott and James Irwin unfolded me from the Lunar Module, and on July 31, 1971, I went on my very first drive, becoming the first crewed electric vehicle ever driven on another world!',
-      audio: '/assets/audio/moon/lrv-3.mp3',
+      audio: '/assets/audio/Moon Buggy-3.mp3',
     },
     {
       speaker: 'Moon Buggy',
       text: 'I was powered by special silver-zinc batteries and designed with woven steel wire tires so I wouldn\'t sink into the soft moon dust. Across 3 total drives, I logged over 3 hours of driving time and carried Dave and Jim across 27.9 kilometers of craters and mountain slopes, allowing them to collect heavy moon rocks and explore far beyond their landing site!',
-      audio: '/assets/audio/moon/lrv-4.mp3',
+      audio: '/assets/audio/Moon Buggy-4.mp3',
     },
     {
       speaker: 'Moon Buggy',
       text: 'On August 2, 1971, my driving days ended. The astronauts carefully parked me a safe distance away so my mounted color TV camera could film their upper spacecraft lifting off into lunar orbit. Today, I am still parked right here in Hadley-Apennine, proud to have been the ultimate road trip companion in space history!',
-      audio: '/assets/audio/moon/lrv-5.mp3',
+      audio: '/assets/audio/Moon Buggy-5.mp3',
     },
     {
       speaker: 'Moon Buggy',
       text: 'Thank you for scanning and visiting me, Space Commander {name}! Keep rolling forward, and never stop exploring!',
-      audio: '/assets/audio/moon/lrv-6.mp3',
+      audio: '/assets/audio/Moon Buggy-6.mp3',
     },
   ],
 
