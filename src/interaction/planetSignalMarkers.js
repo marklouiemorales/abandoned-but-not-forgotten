@@ -3,12 +3,15 @@
 //
 // FIXED POSITIONS
 //   Every signal is pinned to a fixed point in the planet MESH's own coordinates, so it
-//   can never drift: no raycast, no per-load guessing. The marker is a child of the
-//   planet mesh itself, so it turns with whatever turns the planet.
+//   can never drift: no raycast per frame, no per-load guessing. The marker is a child of
+//   the planet mesh itself, so it turns with whatever turns the planet.
 //
 //   Give each signal ONE of these in moonSignals.js / marsSignals.js:
 //     pos: [x, y, z]      <- exact point (a direction from the planet's centre). Preferred.
-//     lat: 0.67, lon: 23.47   <- still works (same mapping as before)
+//     lat: 0.67, lon: 23.47   <- the REAL coordinates. Rotated into the model's frame using
+//                                any signal that has both a pos and a lat/lon (see computeFrame).
+//   Best practice: give EVERY signal its real lat/lon, and add a picked `pos` to ONE of them
+//   (two for a full guarantee). Then all of them land on their exact locations.
 //
 // FINDING THE COORDINATES
 //   Open the page with  ?pick=1  (e.g. /?phase=moon&pick=1), DOUBLE-CLICK a spot on the
@@ -16,9 +19,23 @@
 //        pos: [0.412, 0.103, 0.905]   (lat 5.91, lon 24.48)
 //   and copies the  pos: [...]  part to your clipboard. Paste it into that signal.
 //
+// STAYING ON THE COORDINATE
+//   The screen position of each marker is recomputed RIGHT AFTER every render of the
+//   planet camera, from the same matrices that were just drawn. So the circle can never
+//   lag a frame behind the surface while you drag, glide or auto-rotate. Positions are
+//   mapped through the canvas's own on-screen rectangle (not the window), so they stay
+//   right even if the canvas is not exactly the full window.
+//
+// RANDOM SPOTS (default)
+//   Each signal is placed at a random point on the planet: spread at least 50 degrees apart,
+//   away from the poles, with the first one starting in view. The spots are kept while the
+//   page stays open (leaving and coming back keeps them) and change on a reload.
+//   Pass { randomize: false } to use the fixed pos / lat,lon from the signals data instead.
+//
 // OTHER BEHAVIOUR
-//   - Signals on the FAR side show as dashed markers just inside the planet's edge.
-//     Clicking one rotates the planet so the signal turns to face you.
+//   - A signal on the FAR side is NOT visible. It fades out before it reaches the planet's
+//     edge and shows again when the user rotates the planet toward it.
+//     (Pass { showBehind: true } to show far-side signals as dashed markers on the edge.)
 //   - Unknown signals are white. Once the equipment is found they turn green.
 //   - Each marker has THREE pulse rings plus rotating targeting brackets (see styles.css).
 //
@@ -50,12 +67,53 @@ function directionToLatLon(v) {
   };
 }
 
-// a signal's fixed direction: `pos: [x,y,z]` (or {x,y,z}) wins, else lat/lon
-function signalDirection(sig) {
+// ---- direction of a signal ----
+//   1. `pos: [x,y,z]` (or {x,y,z}) is exact and always wins.
+//   2. otherwise the REAL lat/lon is used, rotated into the model's own frame.
+// The rotation is learned from the signals that have BOTH a `pos` (picked on the model) and a
+// real lat/lon:  one such signal  = fixes the longitude offset (turn around the poles)
+//                two or more      = fixes the full orientation of the model
+// So pick ONE signal's pos (?pick=1) and every other lat/lon signal lines up with it.
+const posVector = (sig) => {
   const p = sig.pos;
-  if (Array.isArray(p) && p.length >= 3) return new THREE.Vector3(p[0], p[1], p[2]).normalize();
-  if (p && typeof p === 'object') return new THREE.Vector3(p.x, p.y, p.z).normalize();
-  return latLonToDirection(sig.lat ?? 0, sig.lon ?? 0);
+  if (Array.isArray(p) && p.length >= 3 && p.every(Number.isFinite)) return new THREE.Vector3(p[0], p[1], p[2]).normalize();
+  if (p && typeof p === 'object' && [p.x, p.y, p.z].every(Number.isFinite)) return new THREE.Vector3(p.x, p.y, p.z).normalize();
+  return null;
+};
+const hasLatLon = (sig) => Number.isFinite(sig.lat) && Number.isFinite(sig.lon);
+
+function frameBasis(u, v) {
+  const cross = u.clone().cross(v);
+  if (cross.length() < 1e-3) return null;                 // too close together to tell the orientation
+  const t1 = u.clone().normalize();
+  const t2 = cross.normalize();
+  const t3 = t1.clone().cross(t2);
+  return new THREE.Matrix4().makeBasis(t1, t2, t3);
+}
+
+// rotation that takes "real lat/lon directions" into the model's frame (null = none needed)
+function computeFrame(signals) {
+  const refs = signals
+    .filter((s) => posVector(s) && hasLatLon(s))
+    .map((s) => ({ a: latLonToDirection(s.lat, s.lon), b: posVector(s) }));
+  if (refs.length >= 2) {
+    const A = frameBasis(refs[0].a, refs[1].a);
+    const B = frameBasis(refs[0].b, refs[1].b);
+    if (A && B) return { kind: 'full', m: new THREE.Matrix4().multiplyMatrices(B, A.clone().transpose()) };
+  }
+  if (refs.length >= 1) {
+    const lonA = Math.atan2(refs[0].a.x, refs[0].a.z);
+    const lonB = Math.atan2(refs[0].b.x, refs[0].b.z);
+    return { kind: 'longitude', deg: THREE.MathUtils.radToDeg(lonB - lonA), m: new THREE.Matrix4().makeRotationY(lonB - lonA) };
+  }
+  return null;
+}
+
+function signalDirection(sig, frame) {
+  const exact = posVector(sig);
+  if (exact) return exact;
+  const d = latLonToDirection(sig.lat ?? 0, sig.lon ?? 0);
+  return (frame ? d.applyMatrix4(frame.m) : d).normalize();
 }
 
 // the planet itself = the biggest TEXTURED, solid mesh under the pivot.
@@ -93,14 +151,22 @@ function medianRadius(geometry, centre) {
   return d[Math.floor(d.length / 2)] || 1;
 }
 
+// random spots, remembered per signal id so leaving and re-entering a planet keeps them.
+// They change when the page is reloaded.
+const sessionDirs = new Map();
+
 export function createSignalMarkers(planet, container, signals, options = {}) {
   const {
     onSelect = () => {},
     controls = null,
-    minFacing = 0.12,    // below this the signal counts as "behind the planet"
-    fadeRange = 0.18,    // front markers fade in over this range above minFacing
+    minFacing = 0.28,    // below this the marker is hidden (keeps it off the planet's edge)
+    fadeRange = 0.22,    // markers fade in over this range above minFacing
     edgeMargin = 40,     // px outside the screen before hiding
     behindDepth = 0.84,
+    showBehind = false,  // false = a signal on the far side is NOT visible; rotate the planet to find it
+    randomize = true,    // true = every signal gets a random spot (kept for this page visit)
+    minSeparationDeg = 50, // random signals stay at least this far apart
+    maxLatDeg = 60,      // ...and away from the poles
   } = options;
 
   const pivot = getPlanetPivot(planet);
@@ -115,6 +181,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
   let snapped = false;
   let activeId = null;
   let planetMesh = null;
+  let frame = null;                     // lat/lon -> model rotation, learned from signals that have a pos
   const centreL = new THREE.Vector3();  // planet centre in the mesh's own coordinates
   let radiusL = 1;                      // planet radius in the mesh's own coordinates
 
@@ -169,6 +236,37 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     return pivot.worldToLocal(_a.clone()).sub(pivot.worldToLocal(_c.clone())).normalize();
   }
 
+  // ---- Random spots: spread out, off the poles, and the first one starts in view ----
+  function assignRandomDirections() {
+    const rad = Math.PI / 180;
+    const centreWorld = planetMesh.localToWorld(centreL.clone());
+    const camDir = planet.camera.position.clone().sub(centreWorld).normalize();
+    // how much a mesh-local direction faces the camera right now (1 = dead centre, <0 = far side)
+    const faceOf = (dir) => planetMesh.localToWorld(centreL.clone().add(dir)).sub(centreWorld).normalize().dot(camDir);
+    const sinMax = Math.sin(maxLatDeg * rad);
+    const chosen = [];
+    items.forEach((it, i) => {
+      const cached = sessionDirs.get(it.sig.id);
+      if (cached) { it.randomDir = cached; chosen.push(cached); return; }
+      let dir = null;
+      for (let tries = 0; tries < 400; tries++) {
+        const y = (Math.random() * 2 - 1) * sinMax;
+        const lon = Math.random() * Math.PI * 2;
+        const r = Math.sqrt(1 - y * y);
+        const cand = new THREE.Vector3(r * Math.sin(lon), y, r * Math.cos(lon));
+        const minCos = Math.cos((tries < 250 ? minSeparationDeg : 20) * rad);   // relax if it is hard to fit
+        if (chosen.some((c) => c.dot(cand) > minCos)) continue;                  // too close to another signal
+        if (i === 0 && faceOf(cand) < 0.6) continue;                             // first one starts in view
+        dir = cand;
+        break;
+      }
+      dir = dir || new THREE.Vector3(Math.random() - 0.5, (Math.random() - 0.5) * 0.8, Math.random() - 0.5).normalize();
+      it.randomDir = dir;
+      sessionDirs.set(it.sig.id, dir);
+      chosen.push(dir);
+    });
+  }
+
   // ---- Pin every anchor to its fixed point on the planet mesh ----
   function pinToPlanet() {
     planetMesh = findPlanetMesh(pivot);
@@ -177,13 +275,16 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     geo.computeBoundingBox();
     geo.boundingBox.getCenter(centreL);
     radiusL = medianRadius(geo, centreL);
+    frame = computeFrame(signals);
+    console.log('[signals] lat/lon calibration:', frame ? (frame.kind === 'full' ? 'full orientation (2+ picked signals)' : `longitude offset ${frame.deg.toFixed(2)}° (1 picked signal)`) : 'none (no signal has both pos and lat/lon, using lat/lon as-is)');
 
     planetMesh.updateWorldMatrix(true, false);
+    if (randomize) assignRandomDirections();
     const centreWorld = planetMesh.localToWorld(centreL.clone());
     const ray = new THREE.Raycaster();
     let misses = 0;
     items.forEach((it) => {
-      it.dir = signalDirection(it.sig);
+      it.dir = randomize && it.randomDir ? it.randomDir : signalDirection(it.sig, frame);
       // fire from outside toward the centre and land on the planet's real surface...
       const originW = planetMesh.localToWorld(centreL.clone().addScaledVector(it.dir, radiusL * 3));
       ray.set(originW, centreWorld.clone().sub(originW).normalize());
@@ -204,7 +305,8 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
   const onPick = (e) => {
     if (disposed || !snapped) return;
     if (e.target.closest && e.target.closest('.signal, .planet-hud, .eq-overlay')) return;
-    const ndcP = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+    const rect = planet.renderer.domElement.getBoundingClientRect();
+    const ndcP = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
     const rc = new THREE.Raycaster();
     rc.setFromCamera(ndcP, planet.camera);
     const hit = rc.intersectObject(planetMesh, false)[0];
@@ -246,22 +348,29 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     if (disposed || !snapped) return;
     ensurePinned();
     if (!planetMesh) return;
-    planet.camera.updateMatrixWorld();
+    const cam = planet.camera;
+    cam.updateMatrixWorld();
+
+    // the canvas's real rectangle on screen: all projection goes through this
+    const rect = planet.renderer.domElement.getBoundingClientRect();
+    const W = rect.width || window.innerWidth;
+    const H = rect.height || window.innerHeight;
+    const ox = rect.left || 0;
+    const oy = rect.top || 0;
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const cam = planet.camera;
 
     // planet centre + silhouette radius on screen
     planetMesh.updateWorldMatrix(true, false);
     planetMesh.localToWorld(centreW.copy(centreL));
     centreNdc.copy(centreW).project(cam);
-    const cx = (centreNdc.x * 0.5 + 0.5) * w;
-    const cy = (-centreNdc.y * 0.5 + 0.5) * h;
+    const cx = ox + (centreNdc.x * 0.5 + 0.5) * W;
+    const cy = oy + (-centreNdc.y * 0.5 + 0.5) * H;
     planetMesh.getWorldScale(scaleV);
     const Rw = radiusL * Math.max(scaleV.x, scaleV.y, scaleV.z);   // surface radius at the planet's current scale
     const d = Math.max(cam.position.distanceTo(centreW), Rw * 1.01);
     const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
-    const radiusPx = ((h / 2) / tanV) * (Rw / Math.sqrt(d * d - Rw * Rw));
+    const radiusPx = ((H / 2) / tanV) * (Rw / Math.sqrt(d * d - Rw * Rw));
 
     for (const it of items) {
       const { anchor, el } = it;
@@ -271,13 +380,18 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
       const facing = normal.dot(toCam);
 
       ndc.copy(world).project(cam);
-      let x = (ndc.x * 0.5 + 0.5) * w;
-      let y = (-ndc.y * 0.5 + 0.5) * h;
+      let x = ox + (ndc.x * 0.5 + 0.5) * W;
+      let y = oy + (-ndc.y * 0.5 + 0.5) * H;
 
       const behind = facing <= minFacing;
       setBehind(it, behind);
 
       if (behind) {
+        if (!showBehind) {
+          el.style.visibility = 'hidden';
+          el.style.pointerEvents = 'none';
+          continue;
+        }
         // keep it INSIDE the disc, near the edge, in the direction of the hidden signal
         let dx = x - cx, dy = y - cy;
         const len = Math.hypot(dx, dy);
@@ -305,13 +419,31 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
         el.classList.toggle('is-up', up);
       }
 
-      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      el.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`;
       el.style.opacity = behind ? '0.9' : String(Math.min(1, (facing - minFacing) / fadeRange));
       el.style.pointerEvents = 'auto';
       el.style.visibility = 'visible';
     }
   }
-  planet.onUpdate(update);
+
+  // ---- Stay glued to the surface: update right AFTER each planet render ----
+  // Wrapping renderer.render means the markers use the very matrices that were just drawn,
+  // whatever order the scene runs its own loop in. (onUpdate is only a fallback.)
+  const renderer = planet.renderer;
+  const hadOwnRender = Object.prototype.hasOwnProperty.call(renderer, 'render');
+  const originalRender = renderer.render;
+  let viaRender = false;
+  let inHook = false;
+  renderer.render = function patchedRender(scene, camera, ...rest) {
+    const out = originalRender.call(this, scene, camera, ...rest);
+    if (!disposed && !inHook && camera === planet.camera) {
+      inHook = true;
+      viaRender = true;
+      try { update(); } finally { inHook = false; }
+    }
+    return out;
+  };
+  planet.onUpdate(() => { if (!viaRender) update(); });
 
   return {
     items,
@@ -330,6 +462,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     dispose() {
       disposed = true;
       window.removeEventListener('dblclick', onPick);
+      if (hadOwnRender) renderer.render = originalRender; else delete renderer.render;
       items.forEach(({ anchor }) => anchor.removeFromParent());
       layer.remove();
     },

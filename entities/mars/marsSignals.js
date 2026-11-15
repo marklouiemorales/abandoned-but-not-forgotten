@@ -9,8 +9,9 @@
 //   'insight'   -> entities/mars/insight.js
 //
 // Signals:  lat -90..90 (north +), lon -180..180 (east +).
-// The lat/lon below are spread around the planet so the signals are easy to find.
-// Edit them freely.
+// lat/lon are the REAL landing coordinates. `pos: null` is a slot for an exact point picked on
+// the model: open /?phase=mars&pick=1, double-click the spot, paste the printed `pos: [...]`
+// over `null`. Pick ONE signal (two is best) and all the others line up automatically.
 // -----------------------------------------------------------------------------
 
 export const MARS_LOCATION = {
@@ -31,8 +32,8 @@ export const MARS_LOCATION = {
 
 export const MARS_SIGNALS = [
   {
-    id: 'mars-signal-1', index: 1, lat: 19, lon: -33,
-    label: 'Unknown signal', hint: 'Click to investigate',
+    id: 'mars-signal-1', index: 1, lat: 19.13, lon: -33.22, pos: null,   // Sojourner, Ares Vallis
+    label: 'Unknown signal', hint: 'Select to investigate',
     equipment: {
       id: 'sojourner',
       name: 'Sojourner Rover',
@@ -45,8 +46,8 @@ export const MARS_SIGNALS = [
     },
   },
   {
-    id: 'mars-signal-2', index: 2, lat: 18, lon: 77,
-    label: 'Unknown signal', hint: 'Click to investigate',
+    id: 'mars-signal-2', index: 2, lat: 18.44, lon: 77.45, pos: null,   // Ingenuity, Jezero Crater
+    label: 'Unknown signal', hint: 'Select to investigate',
     equipment: {
       id: 'ingenuity',
       name: 'Ingenuity Helicopter',
@@ -59,8 +60,8 @@ export const MARS_SIGNALS = [
     },
   },
   {
-    id: 'mars-signal-3', index: 3, lat: 5, lon: 135,
-    label: 'Unknown signal', hint: 'Click to investigate',
+    id: 'mars-signal-3', index: 3, lat: 4.50, lon: 135.62, pos: null,   // InSight, Elysium Planitia
+    label: 'Unknown signal', hint: 'Select to investigate',
     equipment: {
       id: 'insight',
       name: 'InSight Lander',
