@@ -244,7 +244,7 @@ function ensureMarsTransitionStyles() {
    Moon -> Mars dialogue), mission control dialogue + two certificates,
    then black, then the shuttle + credits */
 function playMarsToEnding({ explorer, hud, controls, goTo, planet }) {
-  bgm.stop(2500);   // credits have their own music
+  // Moon/Mars music keeps playing under the certificates; finish() fades it out
   ensureMarsTransitionStyles();
   controls.hold('transition');
   hud.el.classList.add('mt-fade');
@@ -254,12 +254,14 @@ function playMarsToEnding({ explorer, hud, controls, goTo, planet }) {
   // certText = shows the "Certificate processing" screen after the button;
   // without it the part ends instantly (used for the last thank-you part).
   const runPart = (script, next, certText) => {
+    bgm.duck(true);   // lower the music under mission control's voice
     const dlg = createDialogueScene(document.body, {
       explorer,
       config: certText
         ? { script, tasks: [], text: certText }
         : { script, tasks: [], instantAccept: true },
       onAccept: () => {
+        bgm.duck(false);   // music back up for the certificate
         dlg.root.style.display = 'none';
         dlg.dispose();
         next();
@@ -276,6 +278,7 @@ function playMarsToEnding({ explorer, hud, controls, goTo, planet }) {
   const FADE_MS = 1400;
   const finish = () => {
     blackoutScreen(FADE_MS);          // fade dialogue + Mars to black
+    bgm.stop(FADE_MS);                // music fades out with the screen
     setTimeout(() => {                // screen is fully black now
       goTo('ending', { explorer });   // swap scenes behind the black
       document.getElementById('rm-blackout')?.remove();
@@ -395,9 +398,15 @@ const START_MUSIC_FADE_MS = 2200;   // matches the ship's departure fade
 const introPhase = {
   enter({ goTo }) {
     const onLaunch = () => bgm.play(START_MUSIC_URL, { volume: MUSIC_VOLUME }); // "Start journey" clicked
-    const onDepart = () => bgm.stop(START_MUSIC_FADE_MS);                       // mission accepted, ship leaves
+    const onDepart = () => { stopWaiting(); bgm.stop(START_MUSIC_FADE_MS); };                       // mission accepted, ship leaves
     document.addEventListener('remember-me:launch', onLaunch);
     document.addEventListener('remember-me:depart', onDepart);
+    // Intro music: try now; if the browser blocks sound before any interaction, the first click / key / tap starts it
+    const UNLOCK_EVENTS = ['pointerdown', 'pointerup', 'keydown', 'touchend'];
+    const playIntroMusic = () => bgm.play(START_MUSIC_URL, { volume: MUSIC_VOLUME });
+    const stopWaiting = () => UNLOCK_EVENTS.forEach((e) => document.removeEventListener(e, playIntroMusic));
+    UNLOCK_EVENTS.forEach((e) => document.addEventListener(e, playIntroMusic));
+    playIntroMusic();
 
     const briefing = createBriefingScene(document.body, {
       stageContainer: planetContainer,
@@ -418,6 +427,7 @@ const introPhase = {
       ...briefing,
       dispose() {
         document.removeEventListener('remember-me:launch', onLaunch);
+        stopWaiting();
         document.removeEventListener('remember-me:depart', onDepart);
         briefing.dispose();
       },

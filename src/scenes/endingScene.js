@@ -5,12 +5,15 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { clearArchive } from './archiveStore.js';
+import { bgm } from '../audio/bgm.js';
 
 /* ---- tweak here ---- */
 const SHUTTLE_LENGTH = 1.8;                  // world units
 const BASE_ROT = { x: 0, y: 0.06, z: 0.1 };  // roll, yaw, pitch: side profile, nose right, slight climb
 const SPEED = 0.5;                           // overall animation speed
 const STARS = true;
+const END_MUSIC_URL = '/assets/audio/End_Credits.mp3';  // public/assets/audio/End_Credits.mp3
+const END_MUSIC_VOLUME = 0.35;
 const FLAME_X = 1.55;                        // x where the flame card starts in the model
 const DEFAULT_OBJ_URL = '/assets/shuttle-fire.obj'; // public/assets/shuttle-fire.obj
 
@@ -134,6 +137,7 @@ export function createEndingScene(parent = document.body, options = {}) {
     leaving = true;
     againBtn.disabled = true;
     clearArchive();
+    bgm.stop(FADE_OUT * 1000);   // music fades out with the screen
     outEl.style.opacity = 1;
     setTimeout(() => location.assign(location.pathname), FADE_OUT * 1000 + 200);
   });
@@ -149,6 +153,7 @@ export function createEndingScene(parent = document.body, options = {}) {
   function reveal() {
     if (revealed || disposed) return;
     revealed = true;
+    bgm.play(END_MUSIC_URL, { volume: END_MUSIC_VOLUME, fadeInMs: ENTRY_FADE });   // End_Credits music
     fadeEl.style.opacity = 0;      // black -> transparent over ENTRY_FADE
     root.classList.add('is-live'); // un-pauses credits + tagline
     later(() => againBtn.classList.add('show'), (TAGLINE_DELAY + TAGLINE_FADE) * 1000);
@@ -427,6 +432,7 @@ export function createEndingScene(parent = document.body, options = {}) {
     if (disposed) return;
     disposed = true;
     renderer.setAnimationLoop(null);
+    bgm.stop(0);
     removeEventListener('resize', resize);
     removeEventListener('pointermove', onPointer);
     timeouts.forEach(clearTimeout); timeouts.clear();
