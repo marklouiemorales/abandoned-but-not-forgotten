@@ -1,13 +1,26 @@
 // src/interaction/planetSignalMarkers.js
 // -----------------------------------------------------------------------------
 //
-// - Each signal is raycast onto the real mesh once the model has loaded.
-// - Markers are children of the planet pivot, so they rotate with the planet.
-// - The vector line is FITTED every frame so it ends inside the planet's disc: it
-//   points toward the planet's centre and goes up or down, whichever has more room.
-// - Signals on the FAR side show as dashed markers just inside the planet's edge.
-//   Clicking one rotates the planet so the signal turns to face you.
-// - Unknown signals are white. Once the equipment is found they turn green.
+// FIXED POSITIONS
+//   Every signal is pinned to a fixed point in the planet MESH's own coordinates, so it
+//   can never drift: no raycast, no per-load guessing. The marker is a child of the
+//   planet mesh itself, so it turns with whatever turns the planet.
+//
+//   Give each signal ONE of these in moonSignals.js / marsSignals.js:
+//     pos: [x, y, z]      <- exact point (a direction from the planet's centre). Preferred.
+//     lat: 0.67, lon: 23.47   <- still works (same mapping as before)
+//
+// FINDING THE COORDINATES
+//   Open the page with  ?pick=1  (e.g. /?phase=moon&pick=1), DOUBLE-CLICK a spot on the
+//   planet, and read the console. It prints a line like
+//        pos: [0.412, 0.103, 0.905]   (lat 5.91, lon 24.48)
+//   and copies the  pos: [...]  part to your clipboard. Paste it into that signal.
+//
+// OTHER BEHAVIOUR
+//   - Signals on the FAR side show as dashed markers just inside the planet's edge.
+//     Clicking one rotates the planet so the signal turns to face you.
+//   - Unknown signals are white. Once the equipment is found they turn green.
+//   - Each marker has THREE pulse rings plus rotating targeting brackets (see styles.css).
 //
 //   const markers = createSignalMarkers(planet, document.body, SIGNALS, {
 //     controls,
@@ -17,7 +30,7 @@
 // -----------------------------------------------------------------------------
 
 import * as THREE from 'three';
-import { getPlanetPivot, measurePlanetRadius } from './planetControls.js';
+import { getPlanetPivot } from './planetControls.js';
 
 function latLonToDirection(lat, lon) {
   const phi = THREE.MathUtils.degToRad(lat);
@@ -27,6 +40,57 @@ function latLonToDirection(lat, lon) {
     Math.sin(phi),
     Math.cos(phi) * Math.cos(lam)
   );
+}
+
+function directionToLatLon(v) {
+  const n = v.clone().normalize();
+  return {
+    lat: THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(n.y, -1, 1))),
+    lon: THREE.MathUtils.radToDeg(Math.atan2(n.x, n.z)),
+  };
+}
+
+// a signal's fixed direction: `pos: [x,y,z]` (or {x,y,z}) wins, else lat/lon
+function signalDirection(sig) {
+  const p = sig.pos;
+  if (Array.isArray(p) && p.length >= 3) return new THREE.Vector3(p[0], p[1], p[2]).normalize();
+  if (p && typeof p === 'object') return new THREE.Vector3(p.x, p.y, p.z).normalize();
+  return latLonToDirection(sig.lat ?? 0, sig.lon ?? 0);
+}
+
+// the planet itself = the biggest TEXTURED, solid mesh under the pivot.
+// (glow / atmosphere / shadow shells are bigger but have no texture or are transparent,
+//  and they must not be mistaken for the planet)
+function findPlanetMesh(root) {
+  const cands = [];
+  root.updateMatrixWorld(true);
+  root.traverse((o) => {
+    if (!o.isMesh || !o.geometry) return;
+    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+    const bs = o.geometry.boundingSphere;
+    if (!bs) return;
+    const s = o.getWorldScale(new THREE.Vector3());
+    const r = bs.radius * Math.max(s.x, s.y, s.z);
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    const solid = mats.every((m) => m && !m.transparent && m.depthWrite !== false && m.side !== THREE.BackSide);
+    const textured = mats.some((m) => m && m.map);
+    cands.push({ o, r, solid, textured });
+  });
+  const pool = cands.filter((c) => c.solid && c.textured).length ? cands.filter((c) => c.solid && c.textured)
+    : cands.filter((c) => c.solid).length ? cands.filter((c) => c.solid) : cands;
+  pool.sort((x, y) => y.r - x.r);
+  return pool[0]?.o || null;
+}
+
+// typical distance of the vertices from the centre (median = ignores stray vertices)
+function medianRadius(geometry, centre) {
+  const pos = geometry.attributes.position;
+  const step = Math.max(1, Math.floor(pos.count / 4000));
+  const d = [];
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i += step) d.push(v.fromBufferAttribute(pos, i).distanceTo(centre));
+  d.sort((a, b) => a - b);
+  return d[Math.floor(d.length / 2)] || 1;
 }
 
 export function createSignalMarkers(planet, container, signals, options = {}) {
@@ -50,11 +114,13 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
   let disposed = false;
   let snapped = false;
   let activeId = null;
-  let R = 0.58;
-  let surfaceR = 0.58;  
+  let planetMesh = null;
+  const centreL = new THREE.Vector3();  // planet centre in the mesh's own coordinates
+  let radiusL = 1;                      // planet radius in the mesh's own coordinates
+
   const items = signals.map((sig) => {
     const anchor = new THREE.Object3D();
-    pivot.add(anchor);
+    pivot.add(anchor);                  // moved onto the planet mesh once it exists
 
     const el = document.createElement('div');
     el.className = 'signal signal--right';
@@ -63,7 +129,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     el.dataset.id = sig.id;
     el.style.visibility = 'hidden';
     el.innerHTML = `
-      <span class="signal__dot"><span class="signal__ring"></span></span>
+      <span class="signal__dot"><span class="signal__ring"></span><span class="signal__ring signal__ring--2"></span><span class="signal__ring signal__ring--3"></span></span>
       <span class="signal__tag">
         <strong></strong>
       </span>`;
@@ -77,7 +143,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     const select = (e) => {
       e.stopPropagation();
       if (it.behind) {                                   // far side: turn the planet to it
-        if (controls) controls.focusOn(anchor.position.clone().normalize());
+        if (controls) controls.focusOn(pivotDirection(anchor));
         return;
       }
       activeId = sig.id;
@@ -94,30 +160,62 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     return it;
   });
 
-  // ---- Snap every anchor onto the real surface (once the model exists) ----
-  function snapToSurface() {
-    R = measurePlanetRadius(pivot);
-    pivot.updateMatrixWorld(true);
+  // direction (planet centre -> anchor) in the PIVOT's coordinates, for controls.focusOn
+  const _a = new THREE.Vector3();
+  const _c = new THREE.Vector3();
+  function pivotDirection(anchor) {
+    anchor.getWorldPosition(_a);
+    planetMesh.localToWorld(_c.copy(centreL));
+    return pivot.worldToLocal(_a.clone()).sub(pivot.worldToLocal(_c.clone())).normalize();
+  }
 
-    const meshes = [];
-    pivot.traverse((o) => { if (o.isMesh) meshes.push(o); });
+  // ---- Pin every anchor to its fixed point on the planet mesh ----
+  function pinToPlanet() {
+    planetMesh = findPlanetMesh(pivot);
+    if (!planetMesh) { console.warn('[signals] no planet mesh found under the pivot'); return; }
+    const geo = planetMesh.geometry;
+    geo.computeBoundingBox();
+    geo.boundingBox.getCenter(centreL);
+    radiusL = medianRadius(geo, centreL);
 
-    const centre = pivot.getWorldPosition(new THREE.Vector3());
+    planetMesh.updateWorldMatrix(true, false);
+    const centreWorld = planetMesh.localToWorld(centreL.clone());
     const ray = new THREE.Raycaster();
-
-    items.forEach(({ sig, anchor }) => {
-      const dir = latLonToDirection(sig.lat, sig.lon);
-      const originWorld = pivot.localToWorld(dir.clone().multiplyScalar(R * 3));
-      ray.set(originWorld, centre.clone().sub(originWorld).normalize());
-      const hit = ray.intersectObjects(meshes, false)[0];
-      anchor.position.copy(hit ? pivot.worldToLocal(hit.point.clone()) : dir.multiplyScalar(R * 0.99));
+    let misses = 0;
+    items.forEach((it) => {
+      it.dir = signalDirection(it.sig);
+      // fire from outside toward the centre and land on the planet's real surface...
+      const originW = planetMesh.localToWorld(centreL.clone().addScaledVector(it.dir, radiusL * 3));
+      ray.set(originW, centreWorld.clone().sub(originW).normalize());
+      const hit = ray.intersectObject(planetMesh, false)[0];
+      if (!hit) misses++;
+      // ...then store the point in the MESH's own coordinates: fixed from now on
+      it.anchor.position.copy(hit ? planetMesh.worldToLocal(hit.point.clone())
+                                  : centreL.clone().addScaledVector(it.dir, radiusL));
+      planetMesh.add(it.anchor);        // child of the mesh: it can't drift off the surface
     });
-    const total = items.reduce((sum, it) => sum + it.anchor.position.length(), 0);
-    surfaceR = items.length ? total / items.length : R;
-    console.log('[signals] box radius', R.toFixed(3), '| surface radius', surfaceR.toFixed(3), '| pivot scale', pivot.scale.x.toFixed(3));
+    console.log('[signals] pinned', items.length, 'signals to mesh', planetMesh.name || '(unnamed)', '| local radius', radiusL.toFixed(3), '| misses', misses);
     snapped = true;
   }
-  planet.ready.then(() => { if (!disposed) snapToSurface(); });
+  planet.ready.then(() => { if (!disposed) pinToPlanet(); });
+
+  // ---- Dev: double-click the planet to read its coordinates (?pick=1) ----
+  const pickEnabled = new URLSearchParams(window.location.search).has('pick');
+  const onPick = (e) => {
+    if (disposed || !snapped) return;
+    if (e.target.closest && e.target.closest('.signal, .planet-hud, .eq-overlay')) return;
+    const ndcP = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(ndcP, planet.camera);
+    const hit = rc.intersectObject(planetMesh, false)[0];
+    if (!hit) { console.log('[pick] no planet under the cursor'); return; }
+    const local = planetMesh.worldToLocal(hit.point.clone()).sub(centreL).normalize();
+    const { lat, lon } = directionToLatLon(local);
+    const pos = `pos: [${local.x.toFixed(3)}, ${local.y.toFixed(3)}, ${local.z.toFixed(3)}]`;
+    console.log(`[pick] ${pos}   (lat ${lat.toFixed(2)}, lon ${lon.toFixed(2)})`);
+    navigator.clipboard?.writeText(pos).catch(() => {});
+  };
+  if (pickEnabled) window.addEventListener('dblclick', onPick);
 
   function setBehind(it, behind) {
     if (it.behind === behind) return;
@@ -134,19 +232,33 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
   const centreNdc = new THREE.Vector3();
   const scaleV = new THREE.Vector3();
 
+  // the scene can swap or rebuild the Moon mesh after "ready" (e.g. a sharper model loads).
+  // If the mesh we pinned to is no longer the visible planet, pin again to the new one.
+  const isUnderPivot = (o) => { for (let n = o; n; n = n.parent) if (n === pivot) return true; return false; };
+  let tick = 0;
+  function ensurePinned() {
+    if (planetMesh && isUnderPivot(planetMesh) && (++tick % 45 !== 0 || findPlanetMesh(pivot) === planetMesh)) return;
+    console.log('[signals] planet mesh changed, re-pinning signals');
+    pinToPlanet();
+  }
+
   function update() {
     if (disposed || !snapped) return;
+    ensurePinned();
+    if (!planetMesh) return;
+    planet.camera.updateMatrixWorld();
     const w = window.innerWidth;
     const h = window.innerHeight;
     const cam = planet.camera;
 
     // planet centre + silhouette radius on screen
-    pivot.getWorldPosition(centreW);
+    planetMesh.updateWorldMatrix(true, false);
+    planetMesh.localToWorld(centreW.copy(centreL));
     centreNdc.copy(centreW).project(cam);
     const cx = (centreNdc.x * 0.5 + 0.5) * w;
     const cy = (-centreNdc.y * 0.5 + 0.5) * h;
-    pivot.getWorldScale(scaleV);
-    const Rw = surfaceR * scaleV.x;   // surface radius at the planet's current scale
+    planetMesh.getWorldScale(scaleV);
+    const Rw = radiusL * Math.max(scaleV.x, scaleV.y, scaleV.z);   // surface radius at the planet's current scale
     const d = Math.max(cam.position.distanceTo(centreW), Rw * 1.01);
     const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     const radiusPx = ((h / 2) / tanV) * (Rw / Math.sqrt(d * d - Rw * Rw));
@@ -217,6 +329,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     },
     dispose() {
       disposed = true;
+      window.removeEventListener('dblclick', onPick);
       items.forEach(({ anchor }) => anchor.removeFromParent());
       layer.remove();
     },
