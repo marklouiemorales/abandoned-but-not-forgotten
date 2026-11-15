@@ -11,6 +11,9 @@
 //   - READ STORY: every card / panel fades away. Only the 3D object stays, and the story is told in a
 //     visual-novel style dialogue box at the bottom (portrait + speaker + typed text + CONTINUE).
 //   - The LUN / MRS minimap is a painted surface map of the planet with a marker on the site.
+//   - TERRAIN: one shared terrain GLB per planet (VIEWER_CONFIG.terrain.urls) is loaded once, cached and
+//     reused under every equipment. Equipment GLBs then contain ONLY the object (no terrain).
+//     Legacy models that still include their own terrain: set  glb: { sharedTerrain: false }.
 //
 // USAGE
 //   import { EAGLE } from '../entities/moon/eagle.js';
@@ -18,12 +21,16 @@
 //
 // OPTIONAL entity field:  portrait: '/assets/images/moon/eagle-portrait.png'  (dialogue avatar).
 // Without it a small drawn planet avatar is used.
+// OPTIONAL entity.glb fields: sharedTerrain (false = model brings its own terrain), terrainScale, terrainSpot {x,z}.
 // -----------------------------------------------------------------------------
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { createSpaceBackground } from './spaceBackground.js';
 import { loadArchive, saveEquipment } from './archiveStore.js';
+import { loadSharedTerrain, placeTerrainUnder } from './sharedTerrain.js';
 
 export const VIEWER_CONFIG = {
   background: true,
@@ -38,6 +45,16 @@ export const VIEWER_CONFIG = {
   view: { zoom: 2.1, rx: -10, ry: -151 },
   zoom: { min: 2.1, max: 3.5 },
   frame: { pad: 10, min: 90, gap: 18, margin: 16, top: 84 },
+  // shared terrain, loaded once per planet and reused under every equipment
+  terrain: {
+    urls: { moon: '/assets/models/moon/moon_terrain_16x9.glb',
+      mars: '/assets/models/mars/mars_terrain_16x9_lite.glb', },  // add  mars: '...'  later
+    scale: 0.5,    // scene units per terrain metre (equipment is normalised to ~2.4 units)
+    margin: 28,    // metres kept between the chosen spot and the tile edge
+    fog: 0.09,     // fog density while the terrain is shown (hides the tile edge)
+    shadows: true,
+    hide: ['terrain', 'ground', 'landscape', 'moon surface', 'lunar surface'],   // node names of a terrain still baked into an old model: hidden when the shared one is used
+  },
   text: {
     view: 'View', reset: 'Reset', zoom: 'Zoom', rotation: 'Camera', light: 'Light',
     day: 'Day', dusk: 'Dusk', night: 'Night',
@@ -435,6 +452,10 @@ export function createEquipmentViewer(container = document.body, options = {}) {
   config.zoom = { ...VIEWER_CONFIG.zoom, ...(options.config?.zoom || {}) };
   config.view.zoom = Math.min(config.zoom.max, Math.max(config.zoom.min, config.view.zoom));
   config.frame = { ...VIEWER_CONFIG.frame, ...(options.config?.frame || {}) };
+  config.terrain = {
+    ...VIEWER_CONFIG.terrain, ...(options.config?.terrain || {}),
+    urls: { ...VIEWER_CONFIG.terrain.urls, ...(options.config?.terrain?.urls || {}) },
+  };
   const t = config.text;
   let V = config.view;   // replaced per entity (entity.glb.view) in setEntity
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -583,19 +604,30 @@ export function createEquipmentViewer(container = document.body, options = {}) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setClearColor(0x000000, 0);
   if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.shadowMap.enabled = !!config.terrain.shadows;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   ui.canvas.appendChild(renderer.domElement);
 
   const amb = new THREE.AmbientLight();
   const key = new THREE.DirectionalLight();
   const rim = new THREE.DirectionalLight();
   rim.position.set(-4, 1, -4);
-  scene.add(amb, key, rim);
+  // key light casts the equipment's shadow onto the shared terrain
+  key.castShadow = !!config.terrain.shadows;
+  key.shadow.mapSize.set(2048, 2048);
+  Object.assign(key.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 0.5, far: 30 });
+  key.shadow.camera.updateProjectionMatrix();
+  key.shadow.bias = -0.0004;
+  key.shadow.normalBias = 0.02;
+  scene.add(amb, key, key.target, rim);
 
+  // plain fallback ground: used only when no shared terrain applies (legacy models / planets without a terrain yet)
   const groundGeo = new THREE.CircleGeometry(80, 64);
   const groundMat = new THREE.MeshStandardMaterial({ color: 0xcfcfcf, roughness: 0.95, metalness: 0.05 });
   const ground = new THREE.Mesh(groundGeo, groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.35;
+  ground.receiveShadow = true;
   scene.add(ground);
 
   const pivot = new THREE.Group();
@@ -783,6 +815,7 @@ export function createEquipmentViewer(container = document.body, options = {}) {
 
   /* ----- Entity (text, stats, GLB) ----- */
   let loadToken = 0;
+  let sharedTerrain = null;   // the cached terrain currently placed in the scene (never disposed per equipment)
   const disposeModel = () => {
     modelPoints = null;
     equipMeshes = [];
@@ -795,26 +828,40 @@ export function createEquipmentViewer(container = document.body, options = {}) {
   const setStatus = (s) => { ui.status.textContent = s; };
 
   function loadModel(e) {
+    console.log('[terrain] loadModel called', e.id, e.planet, e.glb);
     const my = ++loadToken;
     disposeModel();
     const url = e.glb?.url;
     ui.ph.hidden = false;
     ui.glbname.textContent = url ? url.split('/').pop() : '';
     setStatus(t.loading);
-    const miss = () => { if (my === loadToken) { ui.ph.hidden = false; setStatus(t.awaiting); } };
+    const miss = (err) => { console.error('[terrain] equipment GLB failed to load:', url, err); if (my === loadToken) { ui.ph.hidden = false; setStatus(t.awaiting); } };
     if (!url) { miss(); return; }
-    new GLTFLoader().load(url, (gltf) => {
+
+    // shared terrain: starts downloading in parallel with the model, then comes from cache for every other equipment
+    const planetKey = String(e.planet || '').toLowerCase();
+    const tUrl = e.glb.sharedTerrain === false ? null : config.terrain.urls[planetKey];
+    if (e.glb.sharedTerrain !== false && !tUrl) {
+      console.warn(`[terrain] no shared terrain url for planet "${e.planet}" (config.terrain.urls has: ${Object.keys(config.terrain.urls).join(', ') || 'nothing'}) - using the plain ground`);
+    }
+    const terrainReq = tUrl ? loadSharedTerrain(tUrl) : null;
+    const useShared = !!terrainReq;
+
+    const glbLoader = new GLTFLoader();
+    glbLoader.setMeshoptDecoder(MeshoptDecoder);
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+    glbLoader.setDRACOLoader(dracoLoader);
+    glbLoader.load(url, (gltf) => {
+      console.log('[terrain] equipment GLB loaded, token ok:', my === loadToken);
       if (my !== loadToken) return;
       const obj = gltf.scene;
       const box = new THREE.Box3().setFromObject(obj);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-      const s = (2.4 / (Math.max(size.x, size.y, size.z) || 1)) * (e.glb.viewScale || 1);
+      const s = (0.5 / (Math.max(size.x, size.y, size.z) || 1)) * (e.glb.viewScale || 1);
       obj.scale.setScalar(s);
       obj.position.copy(center.multiplyScalar(-s));
-      const scaledBox = new THREE.Box3().setFromObject(obj);
-      ground.position.y = scaledBox.min.y - 0.005;
-      groundMat.color.set(e.planet === 'mars' ? 0xb55a3c : 0xcfcfcf);
 
       holder.add(obj);
       const r = e.glb.viewRotationDeg || [0, 0, 0];
@@ -823,15 +870,56 @@ export function createEquipmentViewer(container = document.body, options = {}) {
 
       const norm = (n = '') => n.replace(/[\s_]+/g, ' ').trim().toLowerCase();
       const sceneryNames = (e.glb.scenery || config.scenery).map(norm);
-      const isScenery = (o) => {
+      const hideNames = (e.glb.hide || config.terrain.hide).map(norm);
+      const nameHit = (o, list, exact) => {
         for (let n = o; n && n !== holder; n = n.parent) {
           const nm = norm(n.name);
-          if (nm && sceneryNames.some((sn) => nm.includes(sn))) return true;
+          if (nm && list.some((x) => (exact ? nm === x || nm.startsWith(x + ' ') : nm.includes(x)))) return true;
         }
         return false;
       };
+      const isScenery = (o) => nameHit(o, sceneryNames, false);
+      const isOldTerrain = (o) => nameHit(o, hideNames, true);   // a terrain the model brought along with it
+      const skip = (o) => isScenery(o) || (useShared && isOldTerrain(o));
+
       const meshes = [];
-      holder.traverse((o) => { if (o.isMesh && o.geometry?.attributes?.position && !isScenery(o)) meshes.push(o); });
+      holder.traverse((o) => { if (o.isMesh && o.geometry?.attributes?.position && !skip(o)) meshes.push(o); });
+
+      // ---- ground: shared terrain under the equipment (or the plain fallback ground) ----
+      const footBox = new THREE.Box3();
+      if (useShared && meshes.length) meshes.forEach((o) => footBox.expandByObject(o));   // equipment only
+      else footBox.setFromObject(holder);                                                  // legacy: whole model
+      const useGround = () => {
+        if (sharedTerrain) sharedTerrain.root.visible = false;
+        ground.visible = true;
+        ground.position.y = footBox.min.y - 0.005;
+        groundMat.color.set(e.planet === 'mars' ? 0xb55a3c : 0xcfcfcf);
+        scene.fog.density = 0.045;
+      };
+      if (!useShared) useGround();
+      else {
+        ground.visible = false;
+        terrainReq.then((terr) => {
+          if (my !== loadToken) return;
+          if (terr.root.parent !== scene) scene.add(terr.root);
+          terr.root.visible = true;
+          sharedTerrain = terr;
+          const placed = placeTerrainUnder(terr, footBox, {
+            scale: e.glb.terrainScale ?? config.terrain.scale,
+            margin: config.terrain.margin,
+            key: e.id,
+            spot: e.glb.terrainSpot,
+          });
+          // the model's own terrain (if it still has one) would cover the shared one: hide it
+          holder.traverse((o) => { if (o.isMesh && isOldTerrain(o) && !meshes.includes(o)) o.visible = false; });
+          scene.fog.density = config.terrain.fog;
+          console.info('[terrain] placed', { equipment: e.id, spotMetres: [placed.cx, placed.cz], rootPosition: terr.root.position.toArray(), scale: terr.root.scale.x, equipmentBottomY: footBox.min.y });
+        }).catch((err) => {
+          console.warn('[terrain] failed to load/place, using the plain ground instead:', err);
+          if (my === loadToken) useGround();
+        });
+      }
+
       const total = meshes.reduce((n, o) => n + o.geometry.attributes.position.count, 0);
       const step = Math.max(1, Math.floor(total / 6000));
       const pts = [];
@@ -848,8 +936,11 @@ export function createEquipmentViewer(container = document.body, options = {}) {
       }
       modelPoints = pts.length ? new Float32Array(pts) : null;
       equipMeshes = meshes;
+      meshes.forEach((o) => { o.castShadow = true; o.receiveShadow = true; });
 
       if (modelPoints) TARGET.copy(lo).add(hi).multiplyScalar(0.5);
+      key.target.position.copy(TARGET);
+      key.target.updateMatrixWorld();
       applyView();
 
       if (analyzing || analyzed) setWire(true);
@@ -1122,6 +1213,7 @@ export function createEquipmentViewer(container = document.body, options = {}) {
       closeStory();
       loadToken++;
       disposeModel();
+      if (sharedTerrain) scene.remove(sharedTerrain.root);   // stays cached for the next open; see disposeSharedTerrain()
       groundGeo.dispose();
       groundMat.dispose();
       window.removeEventListener('keydown', onKey);
