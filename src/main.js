@@ -7,6 +7,7 @@ import { createPlanetHud } from './scenes/planetHud.js';
 import { createMarsScene } from './scenes/marsScene.js';
 import { createEquipmentViewer } from './scenes/equipmentViewerScene.js';
 import { createEquipmentPanel } from './scenes/equipmentPanel.js';
+import { createEndingScene } from './scenes/endingScene.js';
 import { createPlanetControls } from './interaction/planetControls.js';
 import { createSignalMarkers } from './interaction/planetSignalMarkers.js';
 import { createGameState, GAME_PHASES } from './state/gameState.js';
@@ -48,7 +49,7 @@ const query = new URLSearchParams(window.location.search);
 //   /?view=ingenuity  -> jump straight to the Ingenuity equipment page
 //   /?view=insight    -> jump straight to the InSight equipment page
 //   /?view=sojourner  -> jump straight to the Sojourner equipment page
-//   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment)
+//   /?phase=moon      -> jump to a phase (registration, briefing, moon, mars, equipment, ending)
 const view = query.get('view');
 const VIEW_ENTITIES = {
   eagle: EAGLE,
@@ -157,6 +158,12 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
         setTimeout(() => playMoonToMars({ explorer, hud, controls, goTo, planet }), 900);
       }
 
+      // Every Mars signal inspected -> the ending
+      if (key === 'mars' && !marsToEndingDone && MARS_SIGNALS.every((s) => recovered.has(s.equipment.id))) {
+        marsToEndingDone = true;
+        setTimeout(() => playMarsToEnding({ explorer, hud, controls, goTo }), 900);
+      }
+
       return { planet, controls, hud, markers, panel };
     },
     exit({ scene }) {
@@ -210,6 +217,7 @@ const MARS_TRANSITION_CSS = `
 `;
 
 let moonToMarsDone = false;
+let marsToEndingDone = false;
 
 function ensureMarsTransitionStyles() {
   if (document.getElementById('mt-styles')) return;
@@ -217,6 +225,20 @@ function ensureMarsTransitionStyles() {
   s.id = 'mt-styles';
   s.textContent = MARS_TRANSITION_CSS;
   document.head.appendChild(s);
+}
+
+/* Mars -> Ending: fade the HUD, go to black, then the shuttle + credits */
+function playMarsToEnding({ explorer, hud, controls, goTo }) {
+  ensureMarsTransitionStyles();
+  controls.hold('transition');
+  hud.el.classList.add('mt-fade');
+  document.querySelector('.signal-layer')?.classList.add('mt-fade');
+
+  blackoutScreen(1400);
+  setTimeout(() => {
+    goTo('ending', { explorer });
+    revealFromBlack(1400, 300);
+  }, 1700);
 }
 
 function playMoonToMars({ explorer, hud, controls, goTo, planet }) {
@@ -327,6 +349,28 @@ const introPhase = {
   },
 };
 
+// Ending: shuttle launch/departure loop + credits + closing tagline.
+// The .obj lives in public/assets/shuttle-fire.obj  ->  served at /assets/shuttle-fire.obj
+const endingPhase = {
+  enter({ state, goTo }) {
+    const explorer = state.explorer || { name: 'Commander', id: 'EX-0000', rank: 'Recruit' };
+    return createEndingScene(document.body, {
+      explorer,
+      objUrl: '/assets/shuttle-fire.obj',
+      onRestart: () => {
+        // start a fresh run
+        recovered.clear();
+        moonToMarsDone = false;
+        marsToEndingDone = false;
+        goTo('registration');
+      },
+    });
+  },
+  exit({ scene }) {
+    scene.dispose();
+  },
+};
+
 const phases = {
   // Ship intro ("Start journey") -> zoom on the cockpit -> explorer name -> dialogue
   // -> accept -> the ship launches -> fade to black -> Moon.
@@ -372,6 +416,7 @@ const phases = {
     location: MARS_LOCATION,
     signals: MARS_SIGNALS,
   }),
+  ending: endingPhase,
 };
 
 const game = createGameState(phases);
