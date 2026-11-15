@@ -155,7 +155,7 @@ body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user
 /* ---------- 6. Signal markers + vector guide line (kept inside the planet) ---------- */
 .signal-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
 /* .signal is a zero-size anchor on the surface point. White = unknown, green = recovered. */
-.signal { --sig: #ffffff; --glow: rgba(255, 255, 255, .35); --pulse: #dc143c; --pulse-glow: rgba(220, 20, 60, .6); --d: 22px; position: absolute; left: 0; top: 0; width: 0; height: 0; color: var(--sig);
+.signal { --sig: #ffffff; --glow: rgba(255, 255, 255, .35); --pulse: #ffffff; --pulse-glow: rgba(255, 255, 255, .45); --d: 22px; position: absolute; left: 0; top: 0; width: 0; height: 0; color: var(--sig);
   cursor: pointer; will-change: transform; outline: none; font-family: var(--font-ui); }
 
 /* the marker: one solid point with a soft glow. The equipment panel grows out of it. */
@@ -164,16 +164,35 @@ body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user
 /* larger invisible click target around the point */
 .signal__dot::before { content: ''; position: absolute; inset: -18px; border-radius: 50%; }
 
-/* one outline ring that pulses outward and fades */
+/* three thin rings pulse outward, one third of a cycle apart (radar ping) */
 .signal__ring { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px;
-  border: 3px solid var(--pulse); border-radius: 50%; pointer-events: none;
-  box-shadow: 0 0 10px 2px var(--pulse-glow), inset 0 0 8px 1px var(--pulse-glow);
+  border: 1.5px solid var(--pulse); border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 8px 1px var(--pulse-glow), inset 0 0 6px 1px var(--pulse-glow);
   animation: signal-pulse 2.6s ease-out infinite; }
+/* negative delays = already mid-pulse on load, so all three show immediately */
+.signal__ring--2 { animation-delay: -.87s; }
+.signal__ring--3 { animation-delay: -1.73s; }
 @keyframes signal-pulse {
-  from { transform: scale(.4); opacity: 1; }
-  60%  { opacity: .7; }
-  to   { transform: scale(1.8); opacity: 0; }
+  from { transform: scale(.35); opacity: 1; }
+  60%  { opacity: .55; }
+  to   { transform: scale(2.1); opacity: 0; }
 }
+
+/* HUD-style targeting brackets that slowly rotate around the point (same corner look as .hud-panel) */
+.signal__dot::after { content: ''; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px;
+  pointer-events: none; opacity: .9;
+  background:
+    linear-gradient(var(--pulse), var(--pulse)) 0 0 / 9px 1.5px no-repeat,
+    linear-gradient(var(--pulse), var(--pulse)) 0 0 / 1.5px 9px no-repeat,
+    linear-gradient(var(--pulse), var(--pulse)) 100% 0 / 9px 1.5px no-repeat,
+    linear-gradient(var(--pulse), var(--pulse)) 100% 0 / 1.5px 9px no-repeat,
+    linear-gradient(var(--pulse), var(--pulse)) 0 100% / 9px 1.5px no-repeat,
+    linear-gradient(var(--pulse), var(--pulse)) 0 100% / 1.5px 9px no-repeat,
+    linear-gradient(var(--pulse), var(--pulse)) 100% 100% / 9px 1.5px no-repeat,
+    linear-gradient(var(--pulse), var(--pulse)) 100% 100% / 1.5px 9px no-repeat;
+  filter: drop-shadow(0 0 3px var(--pulse-glow));
+  animation: signal-spin 9s linear infinite; }
+@keyframes signal-spin { to { transform: rotate(360deg); } }
 
 /* thin 45° arrow, tip on the surface point. Default = tag goes down-right. */
 /* label sits --d from the point and flips toward the planet's centre */
@@ -196,6 +215,8 @@ body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user
 /* recovered equipment turns green */
 .signal.is-found { --sig: var(--ok); --glow: rgba(46, 229, 157, .35); --pulse: var(--ok); --pulse-glow: rgba(46, 229, 157, .45); }
 .signal.is-found .signal__ring { animation: none; transform: scale(.8); opacity: .6; }
+.signal.is-found .signal__ring--2, .signal.is-found .signal__ring--3 { display: none; }
+.signal.is-found .signal__dot::after { animation: none; opacity: .6; }
 .signal.is-found .signal__tag strong { border-top-color: var(--ok); }
 
 /* far side: dimmer tag, no white edge, click to rotate */
@@ -209,6 +230,8 @@ body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user
 /* reduced motion: no pulse, keep a still ring */
 @media (prefers-reduced-motion: reduce) {
   .signal__ring { animation: none; transform: scale(.8); opacity: .6; }
+  .signal__ring--2, .signal__ring--3 { display: none; }
+  .signal__dot::after { animation: none; }
 }
 
 /* ---------- 7. Equipment panel (expands from the marker) ---------- */

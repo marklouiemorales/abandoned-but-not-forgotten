@@ -31,7 +31,6 @@ export function createPlanetHud(parent, options = {}) {
     signals = [],
     totalMissions = 6,
     baseFound = 0,
-    onHome = () => {},
     onJournal = () => {},
   } = options;
 
@@ -55,9 +54,6 @@ export function createPlanetHud(parent, options = {}) {
     <!-- TOP RIGHT: round icon buttons -->
     <div class="hud-top-right">
       <div class="hud-buttons">
-        <button class="hud-btn" data-action="home" aria-label="Home">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-        </button>
         <button class="hud-btn" data-action="journal" aria-label="Journal">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h7a3 3 0 013 3v12a2 2 0 00-2-2H2z"/><path d="M22 5h-7a3 3 0 00-3 3v12a2 2 0 012-2h8z"/></svg>
         </button>
@@ -66,9 +62,9 @@ export function createPlanetHud(parent, options = {}) {
 
     <!-- BOTTOM LEFT: readout -->
     <div class="hud-card hud-strip">
-      <div><small>Recovered</small><b><span data-obj-found>0</span> / ${signals.length}</b></div>
+      <div><small>FOUND</small><b><span data-obj-found>0</span> / ${signals.length}</b></div>
       <div><small>Equipment</small><b><span data-total-found>${overallFound}</span> / ${totalMissions}</b></div>
-      <div><small>Status</small><b class="hud-ok">Scanning</b></div>
+      <div><small>Status</small><b class="hud-ok" data-status>SCANNING</b></div>
     </div>
 
     <!-- BOTTOM RIGHT: explorer -->
@@ -91,7 +87,6 @@ export function createPlanetHud(parent, options = {}) {
   root.querySelector('[data-explorer-id]').textContent =
     [explorer.id, explorer.rank].filter(Boolean).join(' · ');
 
-  root.querySelector('[data-action="home"]').addEventListener('click', onHome);
   root.querySelector('[data-action="journal"]').addEventListener('click', onJournal);
 
   return {
@@ -108,7 +103,10 @@ export function createPlanetHud(parent, options = {}) {
       const seg = [...root.querySelectorAll('[data-seg]')].find((n) => n.dataset.seg === id);
       if (seg) seg.classList.add('is-found');
       root.querySelectorAll('[data-obj-found]').forEach((n) => { n.textContent = found.size; });
-      root.querySelector('[data-total-found]').textContent = overallFound;
+           root.querySelector('[data-total-found]').textContent = overallFound;
+      if (found.size === signals.length) {
+        root.querySelector('[data-status]').textContent = 'Completed';
+      }
     },
     dim(on) {
       root.classList.toggle('is-dim', !!on);

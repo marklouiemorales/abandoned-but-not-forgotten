@@ -1,16 +1,19 @@
 import './styles.css';
 
 import { createNameInputScene } from './scenes/nameInputScene.js';
-import { createBriefingScene, revealFromBlack, createDialogueScene, createShuttleStage, blackoutScreen } from './scenes/dialogueScene.js';
+import { createBriefingScene, revealFromBlack, createDialogueScene, createShuttleStage, blackoutScreen, DIALOGUE_CONFIG } from './scenes/dialogueScene.js';
 import { createMoonScene } from './scenes/moonScene.js';
 import { createPlanetHud } from './scenes/planetHud.js';
 import { createMarsScene } from './scenes/marsScene.js';
 import { createEquipmentViewer } from './scenes/equipmentViewerScene.js';
 import { createEquipmentPanel } from './scenes/equipmentPanel.js';
 import { createEndingScene } from './scenes/endingScene.js';
+import { createCertificate } from './scenes/certificateModal.js';
 import { createPlanetControls } from './interaction/planetControls.js';
 import { createSignalMarkers } from './interaction/planetSignalMarkers.js';
 import { createGameState, GAME_PHASES } from './state/gameState.js';
+import { MARS_ENDING_PART_1, MARS_ENDING_PART_2, MARS_ENDING_PART_3 } from './scenes/marsEndingScript.js';
+import { checkAudio } from './interaction/audioCheck.js';
 
 // entities/ sits next to src/
 import { EAGLE } from '../entities/moon/eagle.js';
@@ -119,7 +122,6 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
         signals,
         totalMissions: TOTAL_MISSIONS,
         baseFound,
-        onHome: () => goTo('registration'),
         onJournal: () => console.log('Open journal'),
       });
 
@@ -161,7 +163,7 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
       // Every Mars signal inspected -> the ending
       if (key === 'mars' && !marsToEndingDone && MARS_SIGNALS.every((s) => recovered.has(s.equipment.id))) {
         marsToEndingDone = true;
-        setTimeout(() => playMarsToEnding({ explorer, hud, controls, goTo }), 900);
+        setTimeout(() => playMarsToEnding({ explorer, hud, controls, goTo, planet }), 900);
       }
 
       return { planet, controls, hud, markers, panel };
@@ -181,14 +183,17 @@ const MARS_TRANSITION_SCRIPT = [
   {
     type: 'say',
     text: 'Space Commander {name}! Come in, mission control! Our Deep Space Network tracking shows you’ve successfully visited the Apollo 11 Lunar Module Eagle, Surveyor 3, and Apollo 15 Lunar Roving Vehicle (LRV-1). You’ve officially honored these silent pioneers, and your lunar mission is complete!',
+    audio: '/assets/audio/dialogue/intro-1.mp3',
   },
   {
     type: 'say',
     text: 'Hold on, Space Commander {name}, don’t head back to Earth just yet! We’ve just received an urgent directive from Mission Control. Your stellar work on the Moon proved you’re ready for a much bigger challenge.',
+    audio: '/assets/audio/dialogue/intro-2.mp3',
   },
   {
     type: 'ask',
     text: 'Deep across interplanetary space lies the Red Planet—Mars! There are iconic hardware heroes waiting to be discovered on its dusty plains. Re-board your vessel and set a direct course for Mars, we’ll transmit your exact mission targets as soon as you touch down!',
+    audio: '/assets/audio/dialogue/intro-3.mp3',
     acceptLabel: 'Set course for Mars',
     declineLabel: 'Hear it again',
   },
@@ -227,18 +232,71 @@ function ensureMarsTransitionStyles() {
   document.head.appendChild(s);
 }
 
-/* Mars -> Ending: fade the HUD, go to black, then the shuttle + credits */
-function playMarsToEnding({ explorer, hud, controls, goTo }) {
+/* Mars -> Ending: fade the HUD, Mars recedes to the upper right (same look as the
+   Moon -> Mars dialogue), mission control dialogue + two certificates,
+   then black, then the shuttle + credits */
+function playMarsToEnding({ explorer, hud, controls, goTo, planet }) {
   ensureMarsTransitionStyles();
   controls.hold('transition');
   hud.el.classList.add('mt-fade');
   document.querySelector('.signal-layer')?.classList.add('mt-fade');
 
-  blackoutScreen(1400);
-  setTimeout(() => {
-    goTo('ending', { explorer });
-    revealFromBlack(1400, 300);
-  }, 1700);
+  // run one dialogue part, call next() when the player presses the button.
+  // certText = shows the "Certificate processing" screen after the button;
+  // without it the part ends instantly (used for the last thank-you part).
+  const runPart = (script, next, certText) => {
+    const dlg = createDialogueScene(document.body, {
+      explorer,
+      config: certText
+        ? { script, tasks: [], text: certText }
+        : { script, tasks: [], instantAccept: true },
+      onAccept: () => {
+        dlg.root.style.display = 'none';
+        dlg.dispose();
+        next();
+      },
+    });
+  };
+
+  const PIONEER_PROCESSING = { accepted: 'Certificate processing', acceptedSub: 'Preparing your Lunar & Mars Pioneer Certificate' };
+  const KEEPER_PROCESSING = { accepted: 'Certificate processing', acceptedSub: 'Preparing your Ultimate Space History Keeper honor' };
+
+  const showCert = (variant, next) =>
+    createCertificate(document.body, { variant, explorer, onClose: next });
+
+  const FADE_MS = 1400;
+  const finish = () => {
+    blackoutScreen(FADE_MS);          // fade dialogue + Mars to black
+    setTimeout(() => {                // screen is fully black now
+      goTo('ending', { explorer });   // swap scenes behind the black
+      document.getElementById('rm-blackout')?.remove();
+    }, FADE_MS + 50);
+  };
+
+  const startDialogue = () => {
+    // Part 1 -> Pioneer cert -> Part 2 -> Keeper cert -> Part 3 -> ending
+    runPart(MARS_ENDING_PART_1, () =>
+      showCert('pioneer', () =>
+        runPart(MARS_ENDING_PART_2, () =>
+          showCert('keeper', () =>
+            runPart(MARS_ENDING_PART_3, finish)), KEEPER_PROCESSING)), PIONEER_PROCESSING);
+  };
+
+  // Mars recedes to the upper right, then the dialogue starts
+  let started = false;
+  const start = () => {
+    if (started) return;
+    started = true;
+    startDialogue();
+  };
+  setTimeout(start, 3000); // safety net if the recede never resolves
+
+  planet.recedeTo({ screenX: 0.75, screenY: 0.25, size: 0.3, depth: 1.7, dim: 0.3, duration: 1400 })
+    .then(start)
+    .catch((err) => {
+      console.error('[recede] failed', err);
+      start();
+    });
 }
 
 function playMoonToMars({ explorer, hud, controls, goTo, planet }) {
@@ -268,63 +326,55 @@ function playMoonToMars({ explorer, hud, controls, goTo, planet }) {
     });
 }
 
-function runMarsDialogueLEGACY({ explorer, goTo }) {
-  ensureMarsTransitionStyles();
-  controls.hold('transition');
-
-  // 1. border UI fades out (Home stays)
-  hud.el.classList.add('mt-fade');
-  document.querySelector('.signal-layer')?.classList.add('mt-fade');
-
-  // 2. the Moon recedes to the upper right (see step 9)
-
-  // 3. mission control dialogue, starts once the Moon has settled
-  let startedDialogue = false;
-  const startDialogue = () => {
-    if (startedDialogue) return;
-    startedDialogue = true;
-    runMarsDialogue();
-  };
-  setTimeout(startDialogue, 3000);
-  try {
-    planet.recedeTo({ screenX: 0.75, screenY: 0.25, size: 0.3, depth: 1.7, dim: 0.3, duration: 1400 }).then(startDialogue);
-  } catch (err) {
-    console.error('[recede] failed', err);
-    startDialogue();
-  }
-}
-
 function runMarsDialogue({ explorer, goTo }) {
-  {
-    let stage = null;
-    const dlg = createDialogueScene(document.body, {
-      explorer,
-      config: { script: MARS_TRANSITION_SCRIPT, tasks: [] },
-      onAccept: () => {
-        // 4. rocket animation (placeholder: intro shuttle)
-        dlg.root.style.transition = 'opacity .8s';
-        dlg.root.style.opacity = '0';
-        dlg.root.style.pointerEvents = 'none';
+  let stage = null;
+  const dlg = createDialogueScene(document.body, {
+    explorer,
+    config: { script: MARS_TRANSITION_SCRIPT, tasks: [] },
+    onAccept: () => {
+      const FADE_MS = 1400;
+
+      // fade to black, run the swap while fully black
+      const cover = (swap) => {
+        blackoutScreen(FADE_MS);
+        setTimeout(swap, FADE_MS);
+      };
+
+      // rocket -> Mars: cover, swap scenes, reveal Mars
+      const toMars = () => cover(() => {
+        stage?.dispose();
+        goTo('mars');
+        revealFromBlack(FADE_MS, 300);
+      });
+
+      dlg.root.style.pointerEvents = 'none';
+
+      // 1. cover the dialogue, then swap it for the rocket
+      cover(() => {
+        dlg.dispose();
         stage = createShuttleStage(document.body, {
           objUrls: SHUTTLE_OBJ_URLS,
           onLoaded: () => {
-            stage.launch();
-            setTimeout(() => stage.depart(), 2400);
-          },
-          onError: (e) => console.error(e),
-        });
-        setTimeout(() => blackoutScreen(1400), 3800);
+            // 2. rocket fades in from black
+            revealFromBlack(FADE_MS);
 
-        // 5. fade into the Mars scene
-        setTimeout(() => {
-          dlg.dispose();
-          stage?.dispose();
-          goTo('mars');
-          revealFromBlack(1400, 300);
-        }, 5200);
-      },
-    });
-  }
+            // 3. launch once the reveal is done
+            setTimeout(() => {
+              stage.launch();
+              setTimeout(() => stage.depart(), 2400);
+              setTimeout(toMars, 3400);
+            }, FADE_MS);
+          },
+          onError: (e) => {
+            // no rocket model: still fade in, then continue to Mars
+            console.error(e);
+            revealFromBlack(FADE_MS);
+            setTimeout(toMars, FADE_MS);
+          },
+        });
+      });
+    },
+  });
 }
 
 const introPhase = {
@@ -433,3 +483,18 @@ if (requestedPhase && !Object.prototype.hasOwnProperty.call(phases, startPhase))
 } else {
   game.goTo(startPhase);
 }
+
+// Temporary audio check (safe to run here after all entities and scripts are initialized)
+checkAudio(
+  DIALOGUE_CONFIG,
+  MARS_TRANSITION_SCRIPT,
+  MARS_ENDING_PART_1,
+  MARS_ENDING_PART_2,
+  MARS_ENDING_PART_3,
+  EAGLE,
+  LRV,
+  SURVEYOR3,
+  INSIGHT,
+  INGENUITY,
+  SOJOURNER
+);

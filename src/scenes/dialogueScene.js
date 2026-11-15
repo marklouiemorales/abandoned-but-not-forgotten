@@ -85,24 +85,24 @@ export const DIALOGUE_CONFIG = {
     {
       type: 'say',
       text: 'Commander {name}, mission control has been waiting for you.',
-      audio: '/assets/audio/dialogue/brief-1.mp3',
+      audio: '/assets/audio/Intro-1.mp3',
     },
     {
       type: 'say',
       text: 'Your assignment covers two worlds: the Moon and Mars. On each one, three pieces of equipment are waiting to be explored.',
-      audio: '/assets/audio/dialogue/brief-2.mp3',
+      audio: '/assets/audio/Intro-2.mp3',
     },
     {
       type: 'say',
       showTasks: true,
       text: 'You have two tasks. First, learn the story behind each of the 3 pieces of equipment on the Moon. Then do the same on Mars. Six stories in total.',
-      audio: '/assets/audio/dialogue/brief-3.mp3',
+      audio: '/assets/audio/Intro-3.mp3',
     },
     {
       type: 'ask',
       showTasks: true,
       text: 'Will you accept this mission, Commander {name}?',
-      audio: '/assets/audio/dialogue/ask-accept.mp3',
+      audio: '/assets/audio/Intro-4.mp3',
       acceptLabel: 'Accept mission',
       declineLabel: 'Hear it again',
     },
@@ -122,7 +122,7 @@ export function blackoutScreen(fadeMs) {
     opacity: '0', pointerEvents: 'none', transition: `opacity ${fadeMs}ms ease`,
   });
   document.body.appendChild(f);
-  f.getBoundingClientRect();                   // force reflow so the transition runs
+  f.getBoundingClientRect();                    // force reflow so the transition runs
   f.style.opacity = '1';
 }
 
@@ -345,7 +345,7 @@ export function createDialogueScene(container = document.body, options = {}) {
   const stub = el('div', 'dl-pstub');
   const bars = el('div', 'dl-pbar');
   bars.innerHTML = makeBarcode(String(explorer.id || 'EX'));
-  stub.append(bars, el('div', 'dl-pstub-text', `${t.tasksStub} \u00b7 ${explorer.id || ''}`));
+  stub.append(bars, el('div', 'dl-pstub-text', `${t.tasksStub} · ${explorer.id || ''}`));
   const pmain = el('div', 'dl-pmain');
   const head = el('div', 'dl-phead');
   head.append(el('i', 'dl-plogo'), el('span', null, t.tasksTitle), el('em', null, explorer.id || ''));
@@ -381,27 +381,39 @@ export function createDialogueScene(container = document.body, options = {}) {
 
   // Plays one mp3. If there is no file / it fails / voice is muted, waits `fallbackMs` instead.
   // `onDone` runs when the voice ends (or the fallback wait is over).
-  function speak(src, fallbackMs, onDone) {
+  // `onStart(durationMs | null)` runs once when the voice starts (null = no voice), so typing can sync.
+  function speak(src, fallbackMs, onDone, onStart) {
     const my = token;
-    let finished = false;
+    let finished = false, started = false;
+    const begin = (ms) => { if (started || my !== token) return; started = true; onStart?.(ms); };
     const finish = (delay) => {
       if (finished || my !== token) return;
       finished = true;
       later(() => { if (my === token) onDone?.(); }, delay);
     };
-    if (!src || muted) { finish(fallbackMs); return; }
+    if (!src || muted) { begin(null); finish(fallbackMs); return; }
     const a = new Audio(src);
     audio = a;
-    const fail = () => { root.classList.remove('speaking'); finish(fallbackMs); };
-    a.addEventListener('playing', () => { if (my === token) root.classList.add('speaking'); });
+    const fail = () => { root.classList.remove('speaking'); begin(null); finish(fallbackMs); };
+
+    // Safety net: if audio stalls or browser autoplay policy blocks play(),
+    // ensure typing still begins after 800ms instead of freezing the UI.
+    const startGuard = later(() => { if (!started) begin(null); }, 800);
+
+    a.addEventListener('playing', () => {
+      clearTimeout(startGuard);
+      if (my !== token) return;
+      root.classList.add('speaking');
+      begin(isFinite(a.duration) && a.duration > 0 ? a.duration * 1000 : null);
+    });
     a.addEventListener('ended', () => { root.classList.remove('speaking'); finish(500); });
-    a.addEventListener('error', fail);
-    a.play().catch(fail);
+    a.addEventListener('error', () => { clearTimeout(startGuard); fail(); });
+    a.play().catch(() => { clearTimeout(startGuard); fail(); });
   }
 
-  function type(full, done) {
+  function type(full, done, speed = config.typeSpeedMs) {
     textEl.textContent = '';
-    if (reduceMotion || !config.typeSpeedMs) { textEl.textContent = full; done(); return; }
+    if (reduceMotion || !speed) { textEl.textContent = full; done(); return; }
     let n = 0;
     root.classList.add('typing');
     finishTyping = () => {
@@ -414,7 +426,7 @@ export function createDialogueScene(container = document.body, options = {}) {
       n++;
       textEl.textContent = full.slice(0, n);
       if (n >= full.length) finishTyping();
-    }, config.typeSpeedMs);
+    }, speed);
   }
 
   const firstSay = () => Math.max(0, steps.findIndex((s) => s.type === 'say'));
@@ -456,24 +468,32 @@ export function createDialogueScene(container = document.body, options = {}) {
       return;
     }
 
-    // say / ask
-    type(fill(s.text), () => {
-      if (s.type === 'say') {
-        const btn = el('button', 'dl-btn ghost', t.next);
-        btn.type = 'button';
-        btn.addEventListener('click', (e) => { e.stopPropagation(); next(); });
-        actions.appendChild(btn);
-      } else {
-        const decline = el('button', 'dl-btn ghost', s.declineLabel || 'Hear it again');
-        const accept = el('button', 'dl-btn primary', s.acceptLabel || 'Accept mission');
-        decline.type = accept.type = 'button';
-        decline.addEventListener('click', (e) => { e.stopPropagation(); go(firstSay()); });
-        accept.addEventListener('click', (e) => { e.stopPropagation(); acceptMission(); });
-        actions.append(decline, accept);
-        accept.focus({ preventScroll: true });
-      }
-    });
-    speak(s.audio, 0);
+    // say / ask: the voice starts first, the text types so it ends with the voice
+    const full = fill(s.text);
+    const my = token;
+    let typingStarted = false;
+    const beginTyping = (voiceMs) => {
+      if (typingStarted || my !== token) return;
+      typingStarted = true;
+      const speed = voiceMs ? Math.max(12, (voiceMs * 0.95) / full.length) : config.typeSpeedMs;
+      type(full, () => {
+        if (s.type === 'say') {
+          const btn = el('button', 'dl-btn ghost', t.next);
+          btn.type = 'button';
+          btn.addEventListener('click', (e) => { e.stopPropagation(); next(); });
+          actions.appendChild(btn);
+        } else {
+          const decline = el('button', 'dl-btn ghost', s.declineLabel || 'Hear it again');
+          const accept = el('button', 'dl-btn primary', s.acceptLabel || 'Accept mission');
+          decline.type = accept.type = 'button';
+          decline.addEventListener('click', (e) => { e.stopPropagation(); go(firstSay()); });
+          accept.addEventListener('click', (e) => { e.stopPropagation(); acceptMission(); });
+          actions.append(decline, accept);
+          accept.focus({ preventScroll: true });
+        }
+      }, speed);
+    };
+    speak(s.audio, 0, null, beginTyping);
   }
 
   function acceptMission() {
@@ -785,7 +805,7 @@ export function createShuttleStage(container, { objUrls, onLoaded, onError, onZo
     const dU = clamp01(D.t / DEPART_SECONDS);
     const uT = D.t / DEPART_SECONDS;
     const departX = calm ? 0 : DEPART_DISTANCE * uT * uT;            // starts at rest, keeps accelerating
-    const calmFx = 1 - 0.85 * dep;                                    // damp wobble/flicker while flying
+    const calmFx = 1 - 0.85 * dep;                                   // damp wobble/flicker while flying
 
     if (flame) {
       const s = (1 + (0.05 * Math.sin(t * 23) + 0.04 * Math.sin(t * 37.3) + 0.03 * Math.sin(t * 61)) * calmFx) * (1 + 1.4 * thrust);
@@ -935,21 +955,6 @@ function liftRegistrationLayer() {
 
 /* =============================================================================
    BRIEFING SCENE = intro -> (explorer name) -> dialogue -> launch -> black
-   =============================================================================
-   createBriefingScene(document.body, {
-     stageContainer,                 // where the 3D canvas goes (default: container)
-     registerExplorer: (done) => scene,   // optional name screen. Call done(explorer)
-                                          // when confirmed; return the scene (it gets .dispose())
-     explorer,                       // used when there is no registerExplorer
-     onEnd: (explorer) => { ... },   // screen is fully black: start next scene,
-                                     // then call revealFromBlack()
-     // optional: onAccept, config (dialogue overrides), assets, fadeDelayMs, fadeMs
-   });
-   Events on `document`:
-     'remember-me:launch'  Start journey pressed
-     'remember-me:start'   zoom finished (name screen / dialogue begins)
-     'remember-me:depart'  mission accepted, ship launches
-     'remember-me:end'     screen is fully black
    ============================================================================= */
 
 export function createBriefingScene(container = document.body, options = {}) {
@@ -988,7 +993,7 @@ export function createBriefingScene(container = document.body, options = {}) {
 
   const loadingEl = document.createElement('div');
   loadingEl.className = 'rm-loading';
-  loadingEl.textContent = 'Loading shuttle\u2026';
+  loadingEl.textContent = 'Loading shuttle…';
   container.appendChild(loadingEl);
 
   const intro = document.createElement('main');
@@ -1089,11 +1094,6 @@ export function createBriefingScene(container = document.body, options = {}) {
 }
 
 /* ---------------- Event-driven flow (still available, unchanged behavior) ---------------- */
-// Starts the dialogue when `startEvent` fires, and when the mission is accepted:
-//   1. fires 'remember-me:depart' (your three.js code continues the launch animation)
-//   2. fades the dialogue out
-//   3. after `fadeDelayMs` fades the screen to black over `fadeMs`
-//   4. fires 'remember-me:end'
 export function initDialogueFlow(options = {}) {
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const {

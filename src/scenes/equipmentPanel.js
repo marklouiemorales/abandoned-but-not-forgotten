@@ -105,7 +105,7 @@ export function createEquipmentPanel(parent, options = {}) {
       meta.appendChild(d);
     });
 
-    text('[data-status]', found ? 'Status · Recovered' : 'Status · Not logged');
+    text('[data-status]', found ? 'Status · Found' : 'Status · Not logged');
     openBtn.textContent = found ? 'Open equipment' : 'Inspect equipment';
 
     slot.replaceChildren();
