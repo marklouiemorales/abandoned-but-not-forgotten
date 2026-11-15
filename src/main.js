@@ -8,9 +8,11 @@ import { createMarsScene } from './scenes/marsScene.js';
 import { createEquipmentViewer } from './scenes/equipmentViewerScene.js';
 import { createEquipmentPanel } from './scenes/equipmentPanel.js';
 import { createEndingScene } from './scenes/endingScene.js';
+import { createCertificate } from './scenes/certificateModal.js';
 import { createPlanetControls } from './interaction/planetControls.js';
 import { createSignalMarkers } from './interaction/planetSignalMarkers.js';
 import { createGameState, GAME_PHASES } from './state/gameState.js';
+import { MARS_ENDING_PART_1, MARS_ENDING_PART_2, MARS_ENDING_PART_3 } from './scenes/marsEndingScript.js';
 
 // entities/ sits next to src/
 import { EAGLE } from '../entities/moon/eagle.js';
@@ -161,7 +163,7 @@ function createPlanetPhase({ key, createScene, label, modelUrl, location, signal
       // Every Mars signal inspected -> the ending
       if (key === 'mars' && !marsToEndingDone && MARS_SIGNALS.every((s) => recovered.has(s.equipment.id))) {
         marsToEndingDone = true;
-        setTimeout(() => playMarsToEnding({ explorer, hud, controls, goTo }), 900);
+        setTimeout(() => playMarsToEnding({ explorer, hud, controls, goTo, planet }), 900);
       }
 
       return { planet, controls, hud, markers, panel };
@@ -227,18 +229,70 @@ function ensureMarsTransitionStyles() {
   document.head.appendChild(s);
 }
 
-/* Mars -> Ending: fade the HUD, go to black, then the shuttle + credits */
-function playMarsToEnding({ explorer, hud, controls, goTo }) {
+/* Mars -> Ending: fade the HUD, Mars recedes to the upper right (same look as the
+   Moon -> Mars dialogue), mission control dialogue + two certificates,
+   then black, then the shuttle + credits */
+function playMarsToEnding({ explorer, hud, controls, goTo, planet }) {
   ensureMarsTransitionStyles();
   controls.hold('transition');
   hud.el.classList.add('mt-fade');
   document.querySelector('.signal-layer')?.classList.add('mt-fade');
 
-  blackoutScreen(1400);
-  setTimeout(() => {
-    goTo('ending', { explorer });
-    revealFromBlack(1400, 300);
-  }, 1700);
+  // run one dialogue part, call next() when the player presses the button.
+  // certText = shows the "Certificate processing" screen after the button;
+  // without it the part ends instantly (used for the last thank-you part).
+  const runPart = (script, next, certText) => {
+    const dlg = createDialogueScene(document.body, {
+      explorer,
+      config: certText
+        ? { script, tasks: [], text: certText }
+        : { script, tasks: [], instantAccept: true },
+      onAccept: () => {
+        dlg.root.style.display = 'none';
+        dlg.dispose();
+        next();
+      },
+    });
+  };
+
+  const PIONEER_PROCESSING = { accepted: 'Certificate processing', acceptedSub: 'Preparing your Lunar & Mars Pioneer Certificate' };
+  const KEEPER_PROCESSING = { accepted: 'Certificate processing', acceptedSub: 'Preparing your Ultimate Space History Keeper honor' };
+
+  const showCert = (variant, next) =>
+    createCertificate(document.body, { variant, explorer, onClose: next });
+
+  const finish = () => {
+    blackoutScreen(1400);
+    setTimeout(() => {
+      goTo('ending', { explorer });
+      revealFromBlack(1400, 300);
+    }, 1700);
+  };
+
+  const startDialogue = () => {
+    // Part 1 -> Pioneer cert -> Part 2 -> Keeper cert -> Part 3 -> ending
+    runPart(MARS_ENDING_PART_1, () =>
+      showCert('pioneer', () =>
+        runPart(MARS_ENDING_PART_2, () =>
+          showCert('keeper', () =>
+            runPart(MARS_ENDING_PART_3, finish)), KEEPER_PROCESSING)), PIONEER_PROCESSING);
+  };
+
+  // Mars recedes to the upper right, then the dialogue starts
+  let started = false;
+  const start = () => {
+    if (started) return;
+    started = true;
+    startDialogue();
+  };
+  setTimeout(start, 3000); // safety net if the recede never resolves
+
+  planet.recedeTo({ screenX: 0.75, screenY: 0.25, size: 0.3, depth: 1.7, dim: 0.3, duration: 1400 })
+    .then(start)
+    .catch((err) => {
+      console.error('[recede] failed', err);
+      start();
+    });
 }
 
 function playMoonToMars({ explorer, hud, controls, goTo, planet }) {
