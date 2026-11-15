@@ -5,7 +5,7 @@ const CERT_CSS = `
 .cert-overlay {
   position: fixed; inset: 0; z-index: 200;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
-  background: rgba(2, 5, 14, .72); backdrop-filter: blur(4px);
+  background: transparent;
   opacity: 0; transition: opacity .5s ease; font-family: inherit;
 }
 .cert-overlay.is-open { opacity: 1; }
