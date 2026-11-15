@@ -115,6 +115,17 @@ const buildStyles = (accent) => `
     align-items: center; justify-content: center; gap: 22px; padding: 24px; box-sizing: border-box; }
   .ni-eyebrow { font-size: 11px; letter-spacing: .35em; text-transform: uppercase; color: ${accent}; opacity: .8; }
   .ni-title { margin: 0; font-size: clamp(20px, 3vw, 28px); font-weight: 600; letter-spacing: .08em; }
+  .ni-root--clear { background: transparent; pointer-events: none; }
+  .ni-root--clear .ni-ui { pointer-events: none; }
+  .ni-root--clear .ni-card, .ni-root--clear .ni-form { pointer-events: auto; }
+  .ni-root--clear .ni-eyebrow, .ni-root--clear .ni-title {
+    text-shadow: 0 2px 16px rgba(0,0,0,.9), 0 0 4px rgba(0,0,0,.8); }
+  .ni-root--clear .ni-ui > * { animation: niIn 1.1s cubic-bezier(.2,.7,.2,1) both; }
+  .ni-root--clear .ni-ui > .ni-eyebrow { animation-delay: .05s; }
+  .ni-root--clear .ni-ui > .ni-title { animation-delay: .15s; }
+  .ni-root--clear .ni-ui > .ni-card { animation-delay: .3s; }
+  .ni-root--clear .ni-ui > .ni-form { animation-delay: .45s; }
+  @keyframes niIn { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 
   /* ---------- Boarding pass card ---------- */
   .ni-card { position: relative; width: min(720px, 94vw); font-size: calc(min(720px, 94vw) / 46);
@@ -215,6 +226,7 @@ export function createNameInputScene(container = document.body, options = {}) {
   config.text = { ...NAME_INPUT_CONFIG.text, ...(options.config?.text || {}) };
   const t = config.text;
   const onConfirm = options.onConfirm || (() => {});
+  const transparent = !!options.transparent;
 
   // Generated once per visit
   const explorerId = `EX-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -226,7 +238,7 @@ export function createNameInputScene(container = document.body, options = {}) {
   document.head.appendChild(styleEl);
 
   const root = document.createElement('div');
-  root.className = 'ni-root';
+  root.className = transparent ? 'ni-root ni-root--clear' : 'ni-root';
   root.innerHTML = `
     <div class="ni-ui">
       <div class="ni-eyebrow">${t.eyebrow}</div>
@@ -288,7 +300,8 @@ export function createNameInputScene(container = document.body, options = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setClearColor(0x000000);
-  root.insertBefore(renderer.domElement, root.firstChild); // canvas sits behind the UI
+  root.insertBefore(renderer.domElement, root.firstChild);
+  if (transparent) renderer.domElement.style.display = 'none'; 
 
   const disposables = [];
   const track = (o) => { disposables.push(o); return o; };
@@ -403,7 +416,7 @@ export function createNameInputScene(container = document.body, options = {}) {
   const clock = new THREE.Clock();
   const updaters = [];
 
-  renderer.setAnimationLoop(() => {
+  if (!transparent) renderer.setAnimationLoop(() => {
     const dt = clock.getDelta();
     const time = clock.elapsedTime;
 

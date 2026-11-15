@@ -171,6 +171,7 @@ const introPhase = {
       // name screen shows after the zoom; done(explorer) continues to the dialogue
       registerExplorer: (done) =>
         createNameInputScene(document.getElementById('registration-overlay'), {
+          transparent: true,
           onConfirm: (explorer) => done(explorer),
         }),
       onEnd: (explorer) => {
