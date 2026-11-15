@@ -104,32 +104,32 @@ export const INSIGHT = {
       speaker: 'InSight',
       text: 'Rumble... Thump-thump... "Listening to the inner heartbeat of Mars!"',
       sfx: '/assets/audio/mars/seismic-rumble.mp3',
-      audio: '/assets/audio/mars/insight-1.mp3',
+      audio: '/assets/audio/Insight-1.mp3',
     },
     {
       speaker: 'InSight',
       text: 'Hi, Space Commander {name}! Welcome to Elysium Planitia! I am InSight, short for Interior Exploration using Seismic Investigations, Geodesy and Heat Transport. I was built by Lockheed Martin Space for NASA and managed by the Jet Propulsion Laboratory (JPL).',
-      audio: '/assets/audio/mars/insight-2.mp3',
+      audio: '/assets/audio/Insight-2.mp3',
     },
     {
       speaker: 'InSight',
       text: 'My journey began on May 5, 2018, blasting off aboard an Atlas V rocket. On November 26, 2018, I touched down here on this flat Martian plain. Unlike other rovers that drive around, I stayed right in one spot so I could do something no spacecraft had ever done before: study the deep interior, crust, mantle, and core of Mars!',
-      audio: '/assets/audio/mars/insight-3.mp3',
+      audio: '/assets/audio/Insight-3.mp3',
     },
     {
       speaker: 'InSight',
       text: 'Using my robotic arm, I placed a super-sensitive seismometer directly onto the ground. Over my 4-year mission, I detected over 1,300 "marsquakes"! I listened to underground rumbles and meteorite impacts, helping scientists create the very first 3D map of the inside of another planet!',
-      audio: '/assets/audio/mars/insight-4.mp3',
+      audio: '/assets/audio/Insight-4.mp3',
     },
     {
       speaker: 'InSight',
       text: 'As seasons passed, Martian dust slowly piled up on my solar panels, blocking out sunlight and lowering my power. On December 15, 2022, I sent my final heartwarming message to Earth, and on December 21, 2022, NASA officially retired my mission. My power may be gone, but the secrets I uncovered about Mars\' core will live on forever!',
-      audio: '/assets/audio/mars/insight-5.mp3',
+      audio: '/assets/audio/Insight-5.mp3',
     },
     {
       speaker: 'InSight',
       text: 'Thank you for scanning and remembering me, Space Commander {name}! Listen closely to the mysteries of space, and never stop exploring!',
-      audio: '/assets/audio/mars/insight-6.mp3',
+      audio: '/assets/audio/Insight-6.mp3',
     },
   ],
 

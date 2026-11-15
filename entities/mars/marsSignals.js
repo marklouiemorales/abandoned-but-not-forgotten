@@ -34,12 +34,12 @@ export const MARS_SIGNALS = [
     id: 'mars-signal-1', index: 1, lat: 19, lon: -33,
     label: 'Unknown signal', hint: 'Click to investigate',
     equipment: {
-      id: 'sojourner',
-      name: 'Sojourner Rover',
+      id: 'shoemaker',
+      name: 'Near Shoemaker',
       meta: [
         { label: 'Mission', value: 'Mars Pathfinder' },
-        { label: 'Year', value: '1997' },
-        { label: 'Type', value: 'Rover' },
+        { label: 'Year', value: '1996' },
+        { label: 'Type', value: 'Spacecraft' },
       ],
       mount: null,
     },

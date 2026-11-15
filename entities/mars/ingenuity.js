@@ -108,32 +108,32 @@ export const INGENUITY = {
       speaker: 'Ingenuity',
       text: 'Whirrr... Chop-chop-chop... "The first aircraft to fly on another world!"',
       sfx: '/assets/audio/mars/helicopter-whirr.mp3',
-      audio: '/assets/audio/mars/ingenuity-1.mp3',
+      audio: '/assets/audio/Ingenuity-1.mp3',
     },
     {
       speaker: 'Ingenuity',
       text: 'Hi, Space Commander {name}! Welcome to Jezero Crater, and Wright Brothers Field! I am Ingenuity, NASA\'s trailblazing Mars Helicopter! Designed, built, and managed by NASA\'s Jet Propulsion Laboratory (JPL), I was built to test if powered, controlled flight was possible in Mars\' super-thin atmosphere, which is less than 1 percent as dense as Earth\'s!',
-      audio: '/assets/audio/mars/ingenuity-2.mp3',
+      audio: '/assets/audio/Ingenuity-2.mp3',
     },
     {
       speaker: 'Ingenuity',
       text: 'My journey began on July 30, 2020, blasting off from Cape Canaveral Air Force Station aboard an Atlas V 541 rocket, tucked safely beneath the belly of the Perseverance rover! On February 18, 2021, we touched down right here in Jezero Crater. Two months later, on April 19, 2021, I spun up my carbon-fiber blades and lifted off, achieving humanity\'s very FIRST powered, controlled flight on another planet!',
-      audio: '/assets/audio/mars/ingenuity-3.mp3',
+      audio: '/assets/audio/Ingenuity-3.mp3',
     },
     {
       speaker: 'Ingenuity',
       text: 'I was only supposed to make up to five test flights in 30 days, but I kept soaring for nearly three years! Across 72 historic flights, I logged 128.8 minutes in the Martian sky, flew 10.5 miles (17.0 kilometers), climbed as high as 78.7 feet (24.0 meters), and acted as an aerial scout to help Perseverance navigate tricky terrain!',
-      audio: '/assets/audio/mars/ingenuity-4.mp3',
+      audio: '/assets/audio/Ingenuity-4.mp3',
     },
     {
       speaker: 'Ingenuity',
       text: 'On January 18, 2024, during Flight 72, my rotor blades sustained damage while landing, and on January 25, 2024, NASA officially concluded my mission. Though my flying days are over, I proved that the skies of Mars, and beyond, are open for future aerial explorers!',
-      audio: '/assets/audio/mars/ingenuity-5.mp3',
+      audio: '/assets/audio/Ingenuity-5.mp3',
     },
     {
       speaker: 'Ingenuity',
       text: 'Thank you for scanning and visiting me, Space Commander {name}! Keep soaring high, and never stop exploring!',
-      audio: '/assets/audio/mars/ingenuity-6.mp3',
+      audio: '/assets/audio/Ingenuity-6.mp3',
     },
   ],
 

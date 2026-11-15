@@ -106,27 +106,27 @@ export const NEAR_SHOEMAKER = {
     {
       speaker: 'Shoemaker',
       text: 'Hi, Space Commander {name}! Welcome to the region just south of the Himeros crater—floating out in deep space on a tumbling space rock! I am the NEAR Shoemaker (Near Earth Asteroid Rendezvous – Shoemaker) spacecraft, developed and managed by The Johns Hopkins University Applied Physics Laboratory (APL) for NASA.',
-      audio: '/assets/audio/mars/shoemaker-1.mp3',
+      audio: '/assets/audio/Shoemaker-1.mp3',
     },
     {
       speaker: 'Shoemaker',
       text: 'My record-breaking journey began on February 17, 1996, launching into the cosmos aboard a powerful Delta II 7925-8 rocket. After years of chasing space rocks through the solar system, I officially entered orbit around the asteroid Eros on February 14, 2000. But orbiting wasn\'t enough—on February 12, 2001, I made history by becoming the very FIRST spacecraft ever to safely land on the surface of an asteroid!',
-      audio: '/assets/audio/mars/shoemaker-2.mp3',
+      audio: '/assets/audio/shoemaker-2.mp3',
     },
     {
       speaker: 'Shoemaker',
       text: 'Right down there at coordinates 35.78° S, 279.58° W, I survived a gentle touchdown that I wasn\'t even strictly designed to survive! Working tirelessly on the surface, I transmitted valuable, high-resolution images and crucial scientific data all the way back home to Earth before my systems were finally deactivated.',
-      audio: '/assets/audio/mars/shoemaker-3.mp3',
+      audio: '/assets/audio/Shoemaker-3.mp3',
     },
     {
       speaker: 'Shoemaker',
       text: 'My mission officially concluded on February 28, 2001, when NASA\'s Deep Space Network received my final data signals. Though a later attempt to ping me on December 10, 2002, couldn\'t wake me from the extreme cold, I had already done what no machine had ever done before. Though I am silent today, I proved that human ingenuity could reach out and touch the stars—one asteroid at a time!',
-      audio: '/assets/audio/mars/shoemaker-4.mp3',
+      audio: '/assets/audio/Shoemaker-4.mp3',
     },
     {
       speaker: 'Shoemaker',
       text: 'Thank you for scanning and remembering me, Space Commander {name}! Keep aiming high, and never stop exploring!',
-      audio: '/assets/audio/mars/shoemaker-5.mp3',
+      audio: '/assets/audio/Shoemaker-5.mp3',
     },
   ],
 
