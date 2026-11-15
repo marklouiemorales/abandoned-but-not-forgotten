@@ -72,14 +72,14 @@ export const DIALOGUE_CONFIG = {
       type: 'panel',
       title: 'Your registration is complete.',
       sub: 'Explorer ID {id}, rank {rank}.',
-      audio: '/assets/audio/dialogue/registration-complete.mp3',
+      audio: '/assets/audio/I.mp3',
       hold: 3400,
     },
     {
       type: 'panel',
       title: 'Welcome, Space Commander {name}!',
       sub: 'Explorer ID {id}',
-      audio: '/assets/audio/dialogue/welcome.mp3',
+      audio: '/assets/audio/.mp3',
       hold: 3600,
     },
     {

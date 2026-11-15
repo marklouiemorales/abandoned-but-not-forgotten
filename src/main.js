@@ -189,17 +189,17 @@ const MARS_TRANSITION_SCRIPT = [
   {
     type: 'say',
     text: 'Space Commander {name}! Come in, mission control! Our Deep Space Network tracking shows you’ve successfully visited the Apollo 11 Lunar Module Eagle, Surveyor 3, and Apollo 15 Lunar Roving Vehicle (LRV-1). You’ve officially honored these silent pioneers, and your lunar mission is complete!',
-    audio: '/assets/audio/dialogue/intro-1.mp3',
+    audio: '/assets/audio/Moon_to_Mars-1.mp3',
   },
   {
     type: 'say',
     text: 'Hold on, Space Commander {name}, don’t head back to Earth just yet! We’ve just received an urgent directive from Mission Control. Your stellar work on the Moon proved you’re ready for a much bigger challenge.',
-    audio: '/assets/audio/dialogue/intro-2.mp3',
+    audio: '/assets/audio/Moon_to_Mars-2.mp3',
   },
   {
     type: 'ask',
     text: 'Deep across interplanetary space lies the Red Planet—Mars! There are iconic hardware heroes waiting to be discovered on its dusty plains. Re-board your vessel and set a direct course for Mars, we’ll transmit your exact mission targets as soon as you touch down!',
-    audio: '/assets/audio/dialogue/intro-3.mp3',
+    audio: '/assets/audio/Moon_to_Mars-3.mp3',
     acceptLabel: 'Set course for Mars',
     declineLabel: 'Hear it again',
   },

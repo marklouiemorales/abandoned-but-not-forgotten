@@ -111,7 +111,7 @@ export const NEAR_SHOEMAKER = {
     {
       speaker: 'Shoemaker',
       text: 'My record-breaking journey began on February 17, 1996, launching into the cosmos aboard a powerful Delta II 7925-8 rocket. After years of chasing space rocks through the solar system, I officially entered orbit around the asteroid Eros on February 14, 2000. But orbiting wasn\'t enough—on February 12, 2001, I made history by becoming the very FIRST spacecraft ever to safely land on the surface of an asteroid!',
-      audio: '/assets/audio/shoemaker-2.mp3',
+      audio: '/assets/audio/Shoemaker-2.mp3',
     },
     {
       speaker: 'Shoemaker',
