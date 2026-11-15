@@ -68,7 +68,7 @@ export const EAGLE = {
   glb: {
     // Vite serves the "public" folder from the site root, so DO NOT write "public/" here.
     // File on disk: public/assets/models/moon/eagle.glb
-    url: '/assets/models/moon/apollo-lunar-module-eagle.glb',  // URL to the GLB file (no "public" prefix)
+    url: '/assets/models/moon/Apollo Lunar Module.glb',  // URL to the GLB file (no "public" prefix)
     // Viewer (the "equipment page"): tweak if your model faces the wrong way
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model

@@ -21,7 +21,7 @@ import { INGENUITY } from '../entities/mars/ingenuity.js';
 // you named their export (SURVEYOR3, INSIGHT, SOJOURNER ... or a default export).
 import * as surveyor3Mod from '../entities/moon/surveyor3.js';
 import * as insightMod from '../entities/mars/insight.js';
-import * as sojournerMod from '../entities/mars/sojourner.js';
+import * as sojournerMod from '../entities/mars/nearShoemaker.js';
 import { MOON_LOCATION, MOON_SIGNALS } from '../entities/moon/moonSignals.js';
 import { MARS_LOCATION, MARS_SIGNALS } from '../entities/mars/marsSignals.js';
 
