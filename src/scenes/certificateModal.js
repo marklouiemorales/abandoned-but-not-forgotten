@@ -52,8 +52,9 @@ const CERT_CSS = `
 }
 .cert-field span { display: block; font-size: 9px; letter-spacing: .16em; text-transform: uppercase; color: #7d90b5; }
 .cert-field b { font-size: 14px; letter-spacing: .04em; }
-.cert-qr { position: relative; width: 64px; height: 64px; margin-left: auto; border: 2px solid #0c1b3d; border-radius: 6px;
-  background: repeating-conic-gradient(#0c1b3d 0 25%, #fff 0 50%) 0 0 / 8px 8px; }
+.cert-qr { width: 104px; height: 104px; margin-left: auto; padding: 6px; box-sizing: border-box; background: #fff; border: 2px solid #0c1b3d; border-radius: 6px;
+  line-height: 0; }
+.cert-qr img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .cert-qr i { position: absolute; width: 16px; height: 16px; border: 3px solid #0c1b3d; background: #fff; }
 .cert-qr i:nth-child(1) { top: 3px; left: 3px; }
 .cert-qr i:nth-child(2) { top: 3px; right: 3px; }
@@ -117,7 +118,7 @@ export function createCertificate(parent, { variant = 'pioneer', explorer = {}, 
         <div class="cert-field"><span>Date</span><b class="cert-date"></b></div>
         <div class="cert-field"><span>Explorer ID · Rank</span><b class="cert-id"></b></div>
         <!-- QR PLACEHOLDER: replace this div with a real QR image/canvas later -->
-        <div class="cert-qr" aria-label="QR code placeholder"><i></i><i></i><i></i><em>QR</em></div>
+        <div class="cert-qr"><img src="/assets/qr.png" alt="QR code"></div>
       </div>
     </div>
     <button class="cert-continue" type="button">CONTINUE</button>
