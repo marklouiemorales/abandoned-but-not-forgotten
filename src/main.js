@@ -355,27 +355,47 @@ function runMarsDialogue({ explorer, goTo }) {
       explorer,
       config: { script: MARS_TRANSITION_SCRIPT, tasks: [] },
       onAccept: () => {
-        // 4. rocket animation (placeholder: intro shuttle)
-        dlg.root.style.transition = 'opacity .8s';
-        dlg.root.style.opacity = '0';
-        dlg.root.style.pointerEvents = 'none';
-        stage = createShuttleStage(document.body, {
-          objUrls: SHUTTLE_OBJ_URLS,
-          onLoaded: () => {
-            stage.launch();
-            setTimeout(() => stage.depart(), 2400);
-          },
-          onError: (e) => console.error(e),
-        });
-        setTimeout(() => blackoutScreen(1400), 3800);
+        const FADE_MS = 1400;
 
-        // 5. fade into the Mars scene
-        setTimeout(() => {
-          dlg.dispose();
+        // fade to black, run the swap while fully black
+        const cover = (swap) => {
+          blackoutScreen(FADE_MS);
+          setTimeout(swap, FADE_MS);
+        };
+
+        // rocket -> Mars: cover, swap scenes, reveal Mars
+        const toMars = () => cover(() => {
           stage?.dispose();
           goTo('mars');
-          revealFromBlack(1400, 300);
-        }, 5200);
+          revealFromBlack(FADE_MS, 300);
+        });
+
+        dlg.root.style.pointerEvents = 'none';
+
+        // 1. cover the dialogue, then swap it for the rocket
+        cover(() => {
+          dlg.dispose();
+          stage = createShuttleStage(document.body, {
+            objUrls: SHUTTLE_OBJ_URLS,
+            onLoaded: () => {
+              // 2. rocket fades in from black
+              revealFromBlack(FADE_MS);
+
+              // 3. launch once the reveal is done
+              setTimeout(() => {
+                stage.launch();
+                setTimeout(() => stage.depart(), 2400);
+                setTimeout(toMars, 3400);
+              }, FADE_MS);
+            },
+            onError: (e) => {
+              // no rocket model: still fade in, then continue to Mars
+              console.error(e);
+              revealFromBlack(FADE_MS);
+              setTimeout(toMars, FADE_MS);
+            },
+          });
+        });
       },
     });
   }
