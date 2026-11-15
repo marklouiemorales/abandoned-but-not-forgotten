@@ -4,6 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { clearArchive } from './archiveStore.js';
 
 /* ---- tweak here ---- */
 const SHUTTLE_LENGTH = 1.8;                  // world units
@@ -69,6 +70,16 @@ const CSS = `
 .end-out { position: absolute; inset: 0; z-index: 8; background: #000; opacity: 0; pointer-events: none;
   transition: opacity ${FADE_OUT}s ease; }
 @keyframes end-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.end-final { flex-direction: column; gap: clamp(28px, 6vh, 56px); }
+.end-again { padding: 14px 26px; cursor: pointer; color: #fff; background: rgba(0, 0, 0, .25);
+  border: 1px solid rgba(255, 255, 255, .75); font-family: "Inter", Arial, Helvetica, sans-serif;
+  font-size: clamp(11px, 1.1vw, 13px); font-weight: 400; letter-spacing: .32em; text-indent: .32em; text-transform: uppercase;
+  opacity: 0; pointer-events: none;
+  transition: opacity 1.6s ease, background .25s, border-color .25s, box-shadow .25s; }
+.end-again.show { opacity: 1; pointer-events: auto; }
+.end-again:hover, .end-again:focus-visible { background: rgba(255, 255, 255, .12); border-color: #fff; box-shadow: 0 0 22px rgba(255, 255, 255, .25); }
+.end-again:focus-visible { outline: 1px solid #fff; outline-offset: 4px; }
+.end-again:disabled { cursor: default; }
 `;
 
 function ensureStyles() {
@@ -110,12 +121,22 @@ export function createEndingScene(parent = document.body, options = {}) {
     <div class="end-credits"><div class="end-credits-roll">
       ${credits.map((c) => `<section><h3>${esc(c.title)}</h3>${c.lines.map((l) => `<p>${esc(l.replace('{name}', explorer?.name || 'Commander'))}</p>`).join('')}</section>`).join('')}
     </div></div>
-    <div class="end-final"><p class="end-tagline">${esc(tagline)}</p></div>
+    <div class="end-final"><p class="end-tagline">${esc(tagline)}</p><button type="button" class="end-again">Play again</button></div>
     <div class="end-fade"></div>
     <div class="end-out"></div>`;
   parent.appendChild(root);
   const fadeEl = root.querySelector('.end-fade');
   const outEl = root.querySelector('.end-out');
+  const againBtn = root.querySelector('.end-again');
+  let leaving = false;
+  againBtn.addEventListener('click', () => {
+    if (leaving) return;
+    leaving = true;
+    againBtn.disabled = true;
+    clearArchive();
+    outEl.style.opacity = 1;
+    setTimeout(() => location.assign(location.pathname), FADE_OUT * 1000 + 200);
+  });
 
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const amp = calm ? 0.25 : 1;
@@ -130,10 +151,7 @@ export function createEndingScene(parent = document.body, options = {}) {
     revealed = true;
     fadeEl.style.opacity = 0;      // black -> transparent over ENTRY_FADE
     root.classList.add('is-live'); // un-pauses credits + tagline
-    later(() => {                  // tagline holds, then fades to black and restarts
-      outEl.style.opacity = 1;
-      later(() => onRestart?.(), FADE_OUT * 1000 + 200);
-    }, (TAGLINE_DELAY + TAGLINE_FADE + TAGLINE_HOLD) * 1000);
+    later(() => againBtn.classList.add('show'), (TAGLINE_DELAY + TAGLINE_FADE) * 1000);
   }
 
   // ---- renderer ----
