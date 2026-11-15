@@ -308,6 +308,7 @@ export function createEndingScene(parent = document.body, options = {}) {
 
   const ui = { phase: 'launch', mt: -1 };   // loops forever: launch -> departure -> launch ...
   let busy = false;
+  let rocketDone = false;   // the rocket plays once, then stays gone
   const clamp01 = (x) => Math.min(1, Math.max(0, x));
   const ease = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
   const pp = new THREE.Vector3();           // launch: ship offset from its resting spot
@@ -370,7 +371,7 @@ export function createEndingScene(parent = document.body, options = {}) {
       flameFade = 1 - 0.6 * u;
       fogNear = 6; fogFar = 30;
       lightK = SMALL * SMALL;
-      if (T > DEPART_END) next('launch');
+      if (T > DEPART_END && !rocketDone) { rocketDone = true; rig.visible = false; engineLight.visible = false; }
     }
 
     const ft = launching ? t : t * 1.5;
