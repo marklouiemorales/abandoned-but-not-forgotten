@@ -3,13 +3,13 @@
 // Black space background (lots of stars) + centered, slowly rotating moon.
 //
 // Requires: three  ->  npm i three
-// Model:    put the moon in /public/models/moon.glb (or change modelUrl)
+// Model:    put the moon in /public/models/moon/moon.glb (or change modelUrl)
 //
 // USAGE
 //   import { createMoonScene } from './moonScene.js';
 //
 //   const moon = createMoonScene(document.getElementById('moon-container'), {
-//     modelUrl: '/models/moon.glb',   // .glb / .gltf (recommended) or .obj
+//     modelUrl: '/models/moon/moon.glb',   // .glb / .gltf (recommended) or .obj
 //   });
 //
 //   moon.ready.then(() => { /* model is loaded; safe to raycast / add clicks */ });
@@ -30,7 +30,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
 export function createMoonScene(container, options = {}) {
   const {
-    modelUrl = '/models/moon.glb',
+    modelUrl = '/models/moon/moon.glb',
     textureUrl = null,        // only used for .obj
     fill = 2.0,               // moon size vs screen height (raise to zoom in more)
     rotationSpeed = 0.0008,   // radians per frame

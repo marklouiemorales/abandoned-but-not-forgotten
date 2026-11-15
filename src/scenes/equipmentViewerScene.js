@@ -47,12 +47,8 @@ export const VIEWER_CONFIG = {
   frame: { pad: 10, min: 90, gap: 18, margin: 16, top: 84 },
   // shared terrain, loaded once per planet and reused under every equipment
   terrain: {
-<<<<<<< HEAD
-    urls: { moon: '/assets/models/moon/moon_terrain_16x9.glb' },   // add  mars: '...'  later
-=======
-    urls: { moon: '/assets/models/moon/moon_terrain_16x9.glb',
-      mars: '/assets/models/mars/mars_terrain_16x9_lite.glb', },  // add  mars: '...'  later
->>>>>>> 549ea492942eb0275bb95167c9b7299eb68e1f3d
+    urls: { moon: '/models/moon/moon_terrain_16x9.glb',
+      mars: '/models/mars/mars_terrain_16x9_lite.glb', },  // add  mars: '...'  later
     scale: 0.5,    // scene units per terrain metre (equipment is normalised to ~2.4 units)
     margin: 28,    // metres kept between the chosen spot and the tile edge
     fog: 0.09,     // fog density while the terrain is shown (hides the tile edge)
@@ -854,11 +850,7 @@ export function createEquipmentViewer(container = document.body, options = {}) {
     const glbLoader = new GLTFLoader();
     glbLoader.setMeshoptDecoder(MeshoptDecoder);
     const dracoLoader = new DRACOLoader();
-<<<<<<< HEAD
     dracoLoader.setDecoderPath('/draco/');
-=======
-    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
->>>>>>> 549ea492942eb0275bb95167c9b7299eb68e1f3d
     glbLoader.setDRACOLoader(dracoLoader);
     glbLoader.load(url, (gltf) => {
       console.log('[terrain] equipment GLB loaded, token ok:', my === loadToken);

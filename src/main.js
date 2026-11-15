@@ -201,8 +201,8 @@ const MARS_TRANSITION_SCRIPT = [
 
 const SHUTTLE_OBJ_URLS = [
   '/assets/shuttle-fire.obj',
-  '/assets/models/shuttle-fire.obj',
-  '/assets/models/shuttle/shuttle-fire.obj',
+  '/models/shuttle-fire.obj',
+  '/models/shuttle/shuttle-fire.obj',
   '/shuttle-fire.obj',
 ];
 
@@ -454,7 +454,7 @@ const phases = {
     key: 'moon',
     createScene: createMoonScene,
     label: 'Moon',
-    modelUrl: '/assets/models/moon/moon.glb',
+    modelUrl: '/models/moon/moon.glb',
     location: MOON_LOCATION,
     signals: MOON_SIGNALS,
   }),
@@ -462,7 +462,7 @@ const phases = {
     key: 'mars',
     createScene: createMarsScene,
     label: 'Mars',
-    modelUrl: '/assets/models/mars/mars.glb',
+    modelUrl: '/models/mars/mars.glb',
     location: MARS_LOCATION,
     signals: MARS_SIGNALS,
   }),

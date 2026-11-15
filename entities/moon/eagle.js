@@ -6,7 +6,7 @@
 //   3. analyze   : text + timing for the "Analyze" scan
 //   4. monologue : what Eagle says when the player taps "Read story"
 //
-// Drop your model at   public/assets/models/moon/eagle.glb   (URL below has no "public").
+// Drop your model at   public/models/moon/eagle.glb   (URL below has no "public").
 // Until the file exists, the viewer shows a "3D model" placeholder box.
 // Voice lines: put mp3 files at the `audio` paths (optional, text works without).
 // -----------------------------------------------------------------------------
@@ -67,8 +67,8 @@ export const EAGLE = {
   /* ---------- 3D model ---------- */
   glb: {
     // Vite serves the "public" folder from the site root, so DO NOT write "public/" here.
-    // File on disk: public/assets/models/moon/eagle.glb
-    url: '/assets/models/moon/Apollo Lunar Module.glb',  // URL to the GLB file (no "public" prefix)
+    // File on disk: public/models/moon/eagle.glb
+    url: '/models/moon/Apollo Lunar Module.glb',  // URL to the GLB file (no "public" prefix)
     // Viewer (the "equipment page"): tweak if your model faces the wrong way
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model

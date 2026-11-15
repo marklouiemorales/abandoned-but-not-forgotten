@@ -7,7 +7,7 @@
 //   3. analyze   : text + timing for the "Analyze" scan
 //   4. monologue : what the Moon Buggy says when the player taps "Read story"
 //
-// Drop your model at   public/assets/models/moon/apollo-15-lunar-roving-vehicle.glb
+// Drop your model at   public/models/moon/apollo-15-lunar-roving-vehicle.glb
 // (URL below has no "public"). Until the file exists, the viewer shows a "3D model" placeholder.
 // Voice lines: mp3 files at the `audio` paths are optional, the text works without them.
 // -----------------------------------------------------------------------------
@@ -70,8 +70,8 @@ export const LRV = {
 
   /* ---------- 3D model ---------- */
   glb: {
-    // File on disk: public/assets/models/moon/apollo-15-lunar-roving-vehicle.glb  (rename to match your file)
-    url: '/assets/models/moon/LRV02_che02_nurColor.glb',
+    // File on disk: public/models/moon/apollo-15-lunar-roving-vehicle.glb  (rename to match your file)
+    url: '/models/moon/LRV02_che02_nurColor.glb',
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model
     // Starting camera for THIS equipment (Reset returns here). A rover is long and low, so tweak ry

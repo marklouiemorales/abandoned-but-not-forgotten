@@ -4,7 +4,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 
 export function createMarsScene(container, options = {}) {
   const {
-    modelUrl = '/assets/models/mars/mars.glb',
+    modelUrl = '/models/mars/mars.glb',
     textureUrl = null,
     fill = 2.0,
     rotationSpeed = 0.0008,
@@ -217,6 +217,7 @@ export function createMarsScene(container, options = {}) {
     marsPivot,
     ready,
     state,
+    recedeTo: () => Promise.resolve(),
     onUpdate(update) {
       updaters.push(update);
     },

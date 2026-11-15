@@ -7,7 +7,7 @@
 //   3. analyze   : text + timing for the "Analyze" scan
 //   4. monologue : what Ingenuity says when the player taps "Read story"
 //
-// Drop your model at   public/assets/models/mars/ingenuity-mars-helicopter.glb
+// Drop your model at   public/models/mars/ingenuity-mars-helicopter.glb
 // (URL below has no "public"). Until the file exists, the viewer shows a "3D model" placeholder.
 // Voice lines: mp3 files at the `audio` paths are optional, the text works without them.
 // -----------------------------------------------------------------------------
@@ -80,8 +80,8 @@ export const INGENUITY = {
 
   /* ---------- 3D model ---------- */
   glb: {
-    // File on disk: public/assets/models/mars/ingenuity-mars-helicopter.glb  (rename to match your file)
-    url: '/assets/models/mars/25043_Ingenuity_v3.glb',
+    // File on disk: public/models/mars/ingenuity-mars-helicopter.glb  (rename to match your file)
+    url: '/models/mars/25043_Ingenuity_v3.glb',
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model
     // Starting camera for THIS equipment (Reset returns here). Tweak ry until the first view looks right.

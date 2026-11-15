@@ -961,7 +961,7 @@ export function createBriefingScene(container = document.body, options = {}) {
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const assets = {
     // first one that exists wins
-    obj: ['/assets/shuttle-fire.obj', '/assets/models/shuttle-fire.obj', '/assets/models/shuttle/shuttle-fire.obj', '/shuttle-fire.obj'],
+    obj: ['/assets/shuttle-fire.obj', '/models/shuttle-fire.obj', '/models/shuttle/shuttle-fire.obj', '/shuttle-fire.obj'],
     logo: '/assets/remember-me-logo.svg',
     ...(options.assets || {}),
   };

@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+  function showErr(m){
+    var d=document.createElement('pre');
+    d.style.cssText='position:fixed;z-index:99999;top:0;left:0;right:0;margin:0;padding:12px;background:#400;color:#fff;font:14px monospace;white-space:pre-wrap';
+    d.textContent=m; document.documentElement.appendChild(d);
+  }
+  window.addEventListener('error',function(e){showErr('ERROR: '+(e.message||(e.target&&(e.target.src||e.target.href))||'unknown')+' '+(e.filename||'')+':'+(e.lineno||''));},true);
+  window.addEventListener('unhandledrejection',function(e){showErr('PROMISE: '+((e.reason&&e.reason.stack)||e.reason));});
+</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Abandoned But Not Forgotten - NASA Space Apps</title>

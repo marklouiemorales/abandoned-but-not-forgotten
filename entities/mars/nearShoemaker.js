@@ -7,7 +7,7 @@
 //   3. analyze   : text + timing for the "Analyze" scan
 //   4. monologue : what Shoemaker says when the player taps "Read story"
 //
-// Model file at   public/assets/models/mars/NEAR Shoemaker.glb
+// Model file at   public/models/mars/NEAR Shoemaker.glb
 // (URL below has no "public"). Until the file exists, the viewer shows a "3D model" placeholder.
 // Voice lines: mp3 files at the `audio` paths are optional, the text works without them.
 // -----------------------------------------------------------------------------
@@ -79,8 +79,8 @@ export const NEAR_SHOEMAKER = {
 
   /* ---------- 3D model ---------- */
   glb: {
-    // File on disk: public/assets/models/mars/NEAR Shoemaker.glb
-    url: '/assets/models/mars/NEAR Shoemaker.glb',
+    // File on disk: public/models/mars/NEAR Shoemaker.glb
+    url: '/models/mars/NEAR Shoemaker.glb',
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model
     // Starting camera for THIS equipment (Reset returns here). Tweak ry until the first view looks right.

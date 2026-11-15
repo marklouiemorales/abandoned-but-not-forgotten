@@ -7,7 +7,7 @@
 //   3. analyze   : text + timing for the "Analyze" scan
 //   4. monologue : what InSight says when the player taps "Read story"
 //
-// Drop your model at   public/assets/models/mars/insight-lander.glb
+// Drop your model at   public/models/mars/insight-lander.glb
 // (URL below has no "public"). Until the file exists, the viewer shows a "3D model" placeholder.
 // Voice lines: mp3 files at the `audio` paths are optional, the text works without them.
 // -----------------------------------------------------------------------------
@@ -76,8 +76,8 @@ export const INSIGHT = {
 
   /* ---------- 3D model ---------- */
   glb: {
-    // File on disk: public/assets/models/mars/InSight Cruise Lander (arm deployed).glb  (rename to match your file)
-    url: '/assets/models/mars/InSight Cruise Lander (arm deployed).glb',
+    // File on disk: public/models/mars/InSight Cruise Lander (arm deployed).glb  (rename to match your file)
+    url: '/models/mars/InSight Cruise Lander (arm deployed).glb',
     viewScale: 1,
     viewRotationDeg: [0, 0, 0],       // [x, y, z] extra rotation applied to the model
     // Starting camera for THIS equipment (Reset returns here). Tweak ry until the first view looks right.

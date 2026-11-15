@@ -88,11 +88,7 @@ export function loadSharedTerrain(url) {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     const draco = new DRACOLoader();
-<<<<<<< HEAD
     draco.setDecoderPath('/draco/');
-=======
-    draco.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
->>>>>>> 549ea492942eb0275bb95167c9b7299eb68e1f3d
     loader.setDRACOLoader(draco);
     loader.load(url, (gltf) => {
       try {
