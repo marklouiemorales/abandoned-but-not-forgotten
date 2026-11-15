@@ -66,9 +66,9 @@ export function createPlanetHud(parent, options = {}) {
 
     <!-- BOTTOM LEFT: readout -->
     <div class="hud-card hud-strip">
-      <div><small>Recovered</small><b><span data-obj-found>0</span> / ${signals.length}</b></div>
+      <div><small>FOUND</small><b><span data-obj-found>0</span> / ${signals.length}</b></div>
       <div><small>Equipment</small><b><span data-total-found>${overallFound}</span> / ${totalMissions}</b></div>
-      <div><small>Status</small><b class="hud-ok">Scanning</b></div>
+      <div><small>Status</small><b class="hud-ok" data-status>SCANNING</b></div>
     </div>
 
     <!-- BOTTOM RIGHT: explorer -->
@@ -108,7 +108,10 @@ export function createPlanetHud(parent, options = {}) {
       const seg = [...root.querySelectorAll('[data-seg]')].find((n) => n.dataset.seg === id);
       if (seg) seg.classList.add('is-found');
       root.querySelectorAll('[data-obj-found]').forEach((n) => { n.textContent = found.size; });
-      root.querySelector('[data-total-found]').textContent = overallFound;
+           root.querySelector('[data-total-found]').textContent = overallFound;
+      if (found.size === signals.length) {
+        root.querySelector('[data-status]').textContent = 'Completed';
+      }
     },
     dim(on) {
       root.classList.toggle('is-dim', !!on);

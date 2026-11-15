@@ -261,12 +261,13 @@ function playMarsToEnding({ explorer, hud, controls, goTo, planet }) {
   const showCert = (variant, next) =>
     createCertificate(document.body, { variant, explorer, onClose: next });
 
+  const FADE_MS = 1400;
   const finish = () => {
-    blackoutScreen(1400);
-    setTimeout(() => {
-      goTo('ending', { explorer });
-      revealFromBlack(1400, 300);
-    }, 1700);
+    blackoutScreen(FADE_MS);          // fade dialogue + Mars to black
+    setTimeout(() => {                // screen is fully black now
+      goTo('ending', { explorer });   // swap scenes behind the black
+      document.getElementById('rm-blackout')?.remove();
+    }, FADE_MS + 50);
   };
 
   const startDialogue = () => {

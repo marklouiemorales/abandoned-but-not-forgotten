@@ -32,6 +32,7 @@ const TAGLINE_DELAY = CREDITS_DELAY + CREDITS_DURATION + 0.5; // tagline starts 
 const TAGLINE_FADE = 2.4;     // length of that fade
 const TAGLINE_HOLD = 7;       // how long it stays on screen
 const FADE_OUT = 1.6;         // fade to black, then back to the start
+const ENTRY_FADE = 1400;      // ms, fade in from black when the ending opens
 /* -------------------- */
 
 const CSS = `
@@ -40,7 +41,7 @@ const CSS = `
 .end-loading { position: absolute; inset: 0; display: grid; place-items: center; color: #5b6676;
   font: 14px/1.4 system-ui, sans-serif; text-align: center; padding: 24px; transition: opacity .6s; pointer-events: none; }
 .end-loading.done { opacity: 0; }
-.end-fade { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .4s; pointer-events: none; z-index: 5; }
+.end-fade { position: absolute; inset: 0; background: #000; opacity: 1; transition: opacity ${ENTRY_FADE}ms ease; pointer-events: none; z-index: 5; }
 .end-credits { position: absolute; inset: 0; z-index: 6; overflow: hidden; pointer-events: none;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%);
           mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%); }
@@ -57,6 +58,8 @@ const CSS = `
    Set --end-display-font to the title's font-family (see styles.css). */
 .end-credits-roll p { margin: 0 0 .6em; font-family: var(--end-display-font, inherit); font-size: clamp(15px, 1.7vw, 22px);
   font-weight: 300; line-height: 1.6; letter-spacing: .28em; text-indent: .28em; text-transform: uppercase; }
+.end-root:not(.is-live) .end-credits-roll,
+.end-root:not(.is-live) .end-tagline { animation-play-state: paused; }
 @keyframes end-roll { from { transform: translateY(100vh); } to { transform: translateY(-100%); } }
 .end-final { position: absolute; inset: 0; z-index: 7; display: flex; align-items: center;
   justify-content: center; padding: 24px; text-align: center; pointer-events: none; }
@@ -104,7 +107,6 @@ export function createEndingScene(parent = document.body, options = {}) {
   const root = document.createElement('div');
   root.className = 'end-root';
   root.innerHTML = `
-    <div class="end-loading">Loading shuttle…</div>
     <div class="end-credits"><div class="end-credits-roll">
       ${credits.map((c) => `<section><h3>${esc(c.title)}</h3>${c.lines.map((l) => `<p>${esc(l.replace('{name}', explorer?.name || 'Commander'))}</p>`).join('')}</section>`).join('')}
     </div></div>
@@ -112,7 +114,6 @@ export function createEndingScene(parent = document.body, options = {}) {
     <div class="end-fade"></div>
     <div class="end-out"></div>`;
   parent.appendChild(root);
-  const loadingEl = root.querySelector('.end-loading');
   const fadeEl = root.querySelector('.end-fade');
   const outEl = root.querySelector('.end-out');
 
@@ -122,11 +123,18 @@ export function createEndingScene(parent = document.body, options = {}) {
   const timeouts = new Set();
   const later = (fn, ms) => { const id = setTimeout(() => { timeouts.delete(id); fn(); }, ms); timeouts.add(id); };
 
-  // tagline shows, holds, fades to black, then back to the start
-  later(() => {
-    outEl.style.opacity = 1;
-    later(() => onRestart?.(), FADE_OUT * 1000 + 200);
-  }, (TAGLINE_DELAY + TAGLINE_FADE + TAGLINE_HOLD) * 1000);
+  // fades in from black, then starts the credits, tagline and restart timer
+  let revealed = false;
+  function reveal() {
+    if (revealed || disposed) return;
+    revealed = true;
+    fadeEl.style.opacity = 0;      // black -> transparent over ENTRY_FADE
+    root.classList.add('is-live'); // un-pauses credits + tagline
+    later(() => {                  // tagline holds, then fades to black and restarts
+      outEl.style.opacity = 1;
+      later(() => onRestart?.(), FADE_OUT * 1000 + 200);
+    }, (TAGLINE_DELAY + TAGLINE_FADE + TAGLINE_HOLD) * 1000);
+  }
 
   // ---- renderer ----
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -274,13 +282,12 @@ export function createEndingScene(parent = document.body, options = {}) {
       const pivot = new THREE.Group(); pivot.add(obj);
       pivot.scale.setScalar(SHUTTLE_LENGTH / (hull.max.x - hull.min.x));
       tilt.add(pivot);
-      engineLight.userData.local = new THREE.Vector3(FLAME_X - c.x - 0.5, 0.84 - c.y, 0).multiplyScalar(pivot.scale.x);
-      loadingEl.classList.add('done');
-    })
+      engineLight.userData.local = new THREE.Vector3(FLAME_X - c.x - 0.5, 0.84 - c.y, 0).multiplyScalar(pivot.scale.x);      engineLight.userData.local = new THREE.Vector3(FLAME_X - c.x - 0.5, 0.84 - c.y, 0).multiplyScalar(pivot.scale.x);
+      reveal();    })
     .catch((e) => {
       console.error(e);
-      loadingEl.textContent = `Could not load ${objUrl}`;
-      loadingEl.style.opacity = '0.6';
+      console.error(`Could not load ${objUrl}`);
+      reveal();
     });
 
   // Pointer parallax
