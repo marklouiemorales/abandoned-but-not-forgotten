@@ -1,7 +1,5 @@
 // src/interaction/planetSignalMarkers.js
 // -----------------------------------------------------------------------------
-// Pins clickable HTML markers (with a vector guide line) to lat/lon points ON the
-// surface of any planet (Moon or Mars).
 //
 // - Each signal is raycast onto the real mesh once the model has loaded.
 // - Markers are children of the planet pivot, so they rotate with the planet.
@@ -31,28 +29,6 @@ function latLonToDirection(lat, lon) {
   );
 }
 
-const BEHIND_HINT = 'Click to rotate';
-
-// vector geometry (px)
-const DIAG = 46;      // length of the angled part (45 degrees)
-const PAD = 8;        // room above/below the horizontal run for ticks + node
-const HEIGHT = DIAG + PAD;
-const MIN_RUN = 70;
-const MAX_RUN = 260;
-
-function buildVector(run) {
-  const x = DIAG + run;
-  let ticks = '';
-  for (let t = DIAG + 36; t < x - 12; t += 36) ticks += `M${t} ${PAD - 6}v12`;
-  return {
-    base: `M0 ${HEIGHT} L${DIAG} ${PAD} L${x} ${PAD}`,
-    flow: `M${DIAG} ${PAD} L${x} ${PAD}`,
-    tick: ticks,
-    node: `M${x} ${PAD - 8} L${x + 8} ${PAD} L${x} ${PAD + 8} L${x - 8} ${PAD}Z`,
-    width: x + 10,
-  };
-}
-
 export function createSignalMarkers(planet, container, signals, options = {}) {
   const {
     onSelect = () => {},
@@ -60,7 +36,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     minFacing = 0.12,    // below this the signal counts as "behind the planet"
     fadeRange = 0.18,    // front markers fade in over this range above minFacing
     edgeMargin = 40,     // px outside the screen before hiding
-    behindDepth = 1.0,
+    behindDepth = 0.84,
   } = options;
 
   const pivot = getPlanetPivot(planet);
@@ -75,7 +51,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
   let snapped = false;
   let activeId = null;
   let R = 0.58;
-
+  let surfaceR = 0.58;  
   const items = signals.map((sig) => {
     const anchor = new THREE.Object3D();
     pivot.add(anchor);
@@ -87,16 +63,11 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     el.dataset.id = sig.id;
     el.style.visibility = 'hidden';
     el.innerHTML = `
-      <svg class="signal__arrow" viewBox="0 0 40 40" aria-hidden="true">
-        <path d="M1 1H11M1 1V11M1 1L40 40"/>
-      </svg>
-      <span class="signal__dot"></span>
+      <span class="signal__dot"><span class="signal__ring"></span></span>
       <span class="signal__tag">
         <strong></strong>
-        <small></small>
       </span>`;
     el.querySelector('strong').textContent = sig.label;
-    el.querySelector('small').textContent = sig.hint;
     layer.appendChild(el);
 
     const it = {
@@ -141,6 +112,9 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
       const hit = ray.intersectObjects(meshes, false)[0];
       anchor.position.copy(hit ? pivot.worldToLocal(hit.point.clone()) : dir.multiplyScalar(R * 0.99));
     });
+    const total = items.reduce((sum, it) => sum + it.anchor.position.length(), 0);
+    surfaceR = items.length ? total / items.length : R;
+    console.log('[signals] box radius', R.toFixed(3), '| surface radius', surfaceR.toFixed(3), '| pivot scale', pivot.scale.x.toFixed(3));
     snapped = true;
   }
   planet.ready.then(() => { if (!disposed) snapToSurface(); });
@@ -149,8 +123,6 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     if (it.behind === behind) return;
     it.behind = behind;
     it.el.classList.toggle('is-behind', behind);
-    const small = it.el.querySelector('small');
-    small.textContent = behind ? BEHIND_HINT : (it.found ? 'Equipment recovered' : it.sig.hint);
   }
 
   // ---- Per-frame projection ----
@@ -160,6 +132,7 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
   const ndc = new THREE.Vector3();
   const centreW = new THREE.Vector3();
   const centreNdc = new THREE.Vector3();
+  const scaleV = new THREE.Vector3();
 
   function update() {
     if (disposed || !snapped) return;
@@ -172,9 +145,11 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
     centreNdc.copy(centreW).project(cam);
     const cx = (centreNdc.x * 0.5 + 0.5) * w;
     const cy = (-centreNdc.y * 0.5 + 0.5) * h;
-    const d = Math.max(cam.position.distanceTo(centreW), R * 1.01);
+    pivot.getWorldScale(scaleV);
+    const Rw = surfaceR * scaleV.x;   // surface radius at the planet's current scale
+    const d = Math.max(cam.position.distanceTo(centreW), Rw * 1.01);
     const tanV = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
-    const radiusPx = ((h / 2) / tanV) * (R / Math.sqrt(d * d - R * R));
+    const radiusPx = ((h / 2) / tanV) * (Rw / Math.sqrt(d * d - Rw * Rw));
 
     for (const it of items) {
       const { anchor, el } = it;
@@ -234,7 +209,6 @@ export function createSignalMarkers(planet, container, signals, options = {}) {
       it.found = true;
       it.el.classList.add('is-found');
       it.el.querySelector('strong').textContent = name || (it.sig.equipment && it.sig.equipment.name) || it.sig.label;
-      it.el.querySelector('small').textContent = it.behind ? BEHIND_HINT : 'Equipment recovered';
     },
     resume() {
       activeId = null;

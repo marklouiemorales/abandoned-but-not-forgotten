@@ -155,42 +155,61 @@ body.planet-dragging, body.planet-dragging * { cursor: grabbing !important; user
 /* ---------- 6. Signal markers + vector guide line (kept inside the planet) ---------- */
 .signal-layer { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
 /* .signal is a zero-size anchor on the surface point. White = unknown, green = recovered. */
-.signal { --sig: #ffffff; --d: 40px; position: absolute; left: 0; top: 0; width: 0; height: 0; color: var(--sig);
+.signal { --sig: #ffffff; --glow: rgba(255, 255, 255, .35); --pulse: #dc143c; --pulse-glow: rgba(220, 20, 60, .6); --d: 22px; position: absolute; left: 0; top: 0; width: 0; height: 0; color: var(--sig);
   cursor: pointer; will-change: transform; outline: none; font-family: var(--font-ui); }
 
-/* invisible hit area on the point (the equipment panel grows out of it) */
-.signal__dot { position: absolute; left: -10px; top: -10px; width: 20px; height: 20px; border-radius: 50%; }
+/* the marker: one solid point with a soft glow. The equipment panel grows out of it. */
+.signal__dot { position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--pulse); box-shadow: 0 0 6px 2px var(--pulse), 0 0 16px 5px var(--pulse-glow), 0 0 32px 10px var(--pulse-glow); }
+/* larger invisible click target around the point */
+.signal__dot::before { content: ''; position: absolute; inset: -18px; border-radius: 50%; }
+
+/* one outline ring that pulses outward and fades */
+.signal__ring { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  border: 3px solid var(--pulse); border-radius: 50%; pointer-events: none;
+  box-shadow: 0 0 10px 2px var(--pulse-glow), inset 0 0 8px 1px var(--pulse-glow);
+  animation: signal-pulse 2.6s ease-out infinite; }
+@keyframes signal-pulse {
+  from { transform: scale(.4); opacity: 1; }
+  60%  { opacity: .7; }
+  to   { transform: scale(1.8); opacity: 0; }
+}
 
 /* thin 45° arrow, tip on the surface point. Default = tag goes down-right. */
-.signal__arrow { position: absolute; left: 0; top: 0; width: var(--d); height: var(--d); overflow: visible;
-  pointer-events: none; transform-origin: 0 0; }
-.signal__arrow path { fill: none; stroke: var(--sig); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+/* label sits --d from the point and flips toward the planet's centre */
 
 /* the tag: bold title cell + dimmer hint cell, cut bottom-right corner */
 .signal__tag { position: absolute; left: var(--d); top: var(--d); display: flex; white-space: nowrap;
   font-size: 10px; letter-spacing: .16em; text-transform: uppercase; backdrop-filter: blur(4px);
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%); }
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  opacity: 0; pointer-events: none; transition: opacity .18s ease; }
 .signal__tag strong { padding: 9px 14px; font-weight: 700; color: #fff; background: rgba(6, 10, 24, .88);
-  border-top: 2px solid var(--sig); transition: background .2s; }
-.signal__tag small { padding: 9px 14px; font-size: inherit; line-height: inherit; color: rgba(255, 255, 255, .65);
-  background: rgba(70, 76, 92, .78); border-top: 2px solid transparent; border-left: 1px solid rgba(255, 255, 255, .12); }
+    border-top: 2px solid var(--pulse); transition: background .2s; }
 
 /* direction flips (tag toward the planet's centre) */
 .signal--left .signal__tag { left: auto; right: var(--d); }
 .signal.is-up .signal__tag { top: auto; bottom: var(--d); }
-.signal--left .signal__arrow { transform: scaleX(-1); }
-.signal.is-up .signal__arrow { transform: scaleY(-1); }
-.signal--left.is-up .signal__arrow { transform: scale(-1, -1); }
 
 .signal:hover .signal__tag strong, .signal:focus-visible .signal__tag strong, .signal.is-active .signal__tag strong { background: rgba(20, 40, 90, .95); }
+.signal:hover .signal__tag, .signal:focus-visible .signal__tag, .signal.is-active .signal__tag { opacity: 1; }
 
 /* recovered equipment turns green */
-.signal.is-found { --sig: var(--ok); }
-.signal.is-found .signal__tag small { color: var(--ok); }
+.signal.is-found { --sig: var(--ok); --glow: rgba(46, 229, 157, .35); --pulse: var(--ok); --pulse-glow: rgba(46, 229, 157, .45); }
+.signal.is-found .signal__ring { animation: none; transform: scale(.8); opacity: .6; }
+.signal.is-found .signal__tag strong { border-top-color: var(--ok); }
 
 /* far side: dimmer tag, no white edge, click to rotate */
 .signal.is-behind .signal__tag strong { background: rgba(70, 76, 92, .78); border-top-color: transparent; color: rgba(255, 255, 255, .85); }
-.signal.is-behind .signal__arrow { opacity: .8; }
+.signal.is-behind .signal__dot { opacity: .75; }
+
+/* hover / keyboard focus: brighten the circle so it reads as clickable (front and far side) */
+.signal:hover .signal__dot, .signal:focus-visible .signal__dot {
+  box-shadow: 0 0 10px 3px var(--pulse), 0 0 22px 7px var(--pulse-glow), 0 0 44px 14px var(--pulse-glow); opacity: 1; }
+
+/* reduced motion: no pulse, keep a still ring */
+@media (prefers-reduced-motion: reduce) {
+  .signal__ring { animation: none; transform: scale(.8); opacity: .6; }
+}
 
 /* ---------- 7. Equipment panel (expands from the marker) ---------- */
 .eq-overlay { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
