@@ -413,13 +413,6 @@ const endingPhase = {
     return createEndingScene(document.body, {
       explorer,
       objUrl: '/assets/shuttle-fire.obj',
-      onRestart: () => {
-        // start a fresh run
-        recovered.clear();
-        moonToMarsDone = false;
-        marsToEndingDone = false;
-        goTo('registration');
-      },
     });
   },
   exit({ scene }) {
