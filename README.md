@@ -8,7 +8,7 @@ Abandoned but not Forgotten: Storytelling about NASA's Discarded Equipment on th
 
 ## LINK TO PROJECT DEMO
 
-https://drive.google.com/file/d/1L6L5HAP1KOZGcWOU5gGveU3kSIkJgHkc/view?usp=drive_link
+https://drive.google.com/file/d/1L6L5HAP1KOZGcWOU5gGveU3kSlkJgHkc/view?usp=drivesdk
 
 ## PROJECT OVERVIEW
 
